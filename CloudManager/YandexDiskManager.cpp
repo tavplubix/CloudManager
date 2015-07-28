@@ -50,6 +50,7 @@ void YandexDiskManager::authorize()
 		//requestBody += "&device_id=" + deviceID;
 		//requestBody += "&device_name=" + deviceName;
 		QNetworkReply *reply = oauth->post(QNetworkRequest(QUrl("https://oauth.yandex.ru/token")), QByteArray(requestBody));
+		netLog(QNetworkRequest(QUrl("https://oauth.yandex.ru/token")), requestBody);	//DEBUG
 		//connect(reply, &QNetworkReply::finished, this, &YandexDiskManager::tokenGot);
 		connect(reply, &QNetworkReply::finished, this, [=]() {
 			bool ok = false;
@@ -115,6 +116,7 @@ void YandexDiskManager::setAuthType(AuthType type)
 
 bool YandexDiskManager::_checkForHTTPErrors(QNetworkReply *reply, const char* file, const int line, const char* func)
 {
+	netLog(reply);  //debug
 	int code = HTTPstatus(reply);
 	int codeType = (code / 100) * 100;
 	if (codeType == 400 || codeType == 500) {
@@ -145,6 +147,7 @@ void YandexDiskManager::downloadFile(QFileInfo file)
 	QNetworkRequest request("https://webdav.yandex.ru/" + relative);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.get(request);
+	netLog(request, "EMPTY");	//DEBUG
 	//connect(reply, &QNetworkReply::finished, this, &YandexDiskManager::fileDownloaded);		//хуйня, лямды лучше
 	connect(reply, &QNetworkReply::finished, this, [=](){ 
 		bool ok = false;
@@ -188,6 +191,7 @@ void YandexDiskManager::uploadFile(QFileInfo file)
 	sha256HashCalculator.addData(&f);
 	request.setRawHeader("Sha256", sha256HashCalculator.result());
 	QNetworkReply *reply = disk.put(request, &f);
+	netLog(request, "FILE");	//DEBUG
 	connect(reply, &QNetworkReply::finished, this, [=](){
 		checkForHTTPErrors(reply);
 		int statusCode = HTTPstatus(reply);
@@ -206,6 +210,7 @@ void YandexDiskManager::mkdir(QDir dir)
 	QNetworkRequest request(relative);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.sendCustomRequest(request, "MKCOL");
+	netLog(request, "EMPTY");	//DEBUG
 	connect(reply, &QNetworkReply::finished, this, [=](){
 		checkForHTTPErrors(reply);
 		reply->deleteLater();
@@ -218,6 +223,7 @@ void YandexDiskManager::remove(QFileInfo file)
 	QNetworkRequest request(relative);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.sendCustomRequest(request, "DELETE");
+	netLog(request, "EMPTY");	//DEBUG
 	connect(reply, &QNetworkReply::finished, this, [=](){
 		checkForHTTPErrors(reply);
 		reply->deleteLater();

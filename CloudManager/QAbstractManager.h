@@ -34,6 +34,11 @@ public: //debug
 	virtual bool authorized() = 0;
 	virtual void authorize() = 0;
 
+
+	//QSslConfiguration sslconf_DEBUG_ONLY();
+	void netLog(QNetworkReply *reply);
+	void netLog(const QNetworkRequest &request, const QByteArray &body);
+	QFile log;
 public:
 	//====================== Public Methods ===========================
 	QAbstractManager();
