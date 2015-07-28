@@ -19,3 +19,18 @@
 #include <QJsonObject>
 #include <QCryptographicHash>
 #include <QMessageLogger>
+
+
+
+
+
+
+
+
+
+
+//debug
+#include <QSslConfiguration>
+#include <QSslKey>
+#include <QSsl>
+

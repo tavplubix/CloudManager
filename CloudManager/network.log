@@ -1,0 +1,37 @@
+
+======================== REQUEST =========================
+
+grant_type=authorization_code&code=2336312&client_id=40881b3716704a989c757c30b9922ff2&client_secret=bb46be3d994441919bb6b7c699f9d406
+==========================================================
+
+======================= RESPONSE =========================
+Server: nginx
+Date: Tue, 28 Jul 2015 18:43:56 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+Cache-Control: no-store
+
+{"error_description": "Code has expired", "error": "invalid_grant"}
+==========================================================
+
+======================== REQUEST =========================
+
+grant_type=authorization_code&code=2336312&client_id=40881b3716704a989c757c30b9922ff2&client_secret=bb46be3d994441919bb6b7c699f9d406
+==========================================================
+
+======================= RESPONSE =========================
+Server: nginx
+Date: Tue, 28 Jul 2015 18:43:59 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+Cache-Control: no-store
+
+{"error_description": "Code has expired", "error": "invalid_grant"}
+==========================================================
+
+======================== REQUEST =========================
+
+grant_type=authorization_code&code=2336312&client_id=40881b3716704a989c757c30b9922ff2&client_secret=bb46be3d994441919bb6b7c699f9d406
+==========================================================
