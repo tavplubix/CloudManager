@@ -200,6 +200,7 @@ void YandexDiskManager::uploadFile(QFileInfo file)
 	});
 }
 
+
 void YandexDiskManager::mkdir(QDir dir)
 {
 	QString relative = rootDir.relativeFilePath(dir.canonicalPath());		//WARNING не работает для дирректорий не в корне
