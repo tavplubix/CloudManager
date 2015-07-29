@@ -10,7 +10,7 @@ class YandexDiskManager :
 {
 	Q_OBJECT
 public:
-	enum class AuthType { Basic, OAuth };
+	enum class AuthType : int { Basic, OAuth };
 private:
 	//==================== Hardcoded Const Private Fields ========================
 	const QString appID = "40881b3716704a989c757c30b9922ff2";
@@ -21,7 +21,6 @@ private:
 	AuthType authtype;
 	QByteArray authorizationHeader;
 	time_t validUntil;
-	QString downloadingFile;
 	//====================== Private Methods =====================================
 	bool _checkForHTTPErrors(QNetworkReply *reply, const char* file, const int line, const char* func);
 protected:

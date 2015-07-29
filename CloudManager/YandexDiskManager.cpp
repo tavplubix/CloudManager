@@ -5,15 +5,25 @@ YandexDiskManager::YandexDiskManager()
 {
 	oauth = nullptr;
 	status = Status::Init;
-	authtype = AuthType::OAuth;
+	//restore settings
+	settings->beginGroup("yadisk");
+		authtype = static_cast<AuthType>( settings->value("aythtype", static_cast<int>(AuthType::OAuth)).toInt() );		// I really love static typing
+		//authtype = AuthType::OAuth;	
+		authorizationHeader = settings->value("authorization").value<QByteArray>();	//TODO шифровать токен
+	settings->endGroup();
 	//есть смысл делать всё асинхронно
 	disk.connectToHostEncrypted("https://webdav.yandex.ru/");
 	//QSettings
-	QTimer::singleShot(0, this, &YandexDiskManager::authorize);
+	if (!authorized()) QTimer::singleShot(0, this, &YandexDiskManager::authorize);
 }
 
 YandexDiskManager::~YandexDiskManager()
 {
+	//save settings
+	settings->beginGroup("yadisk");
+	settings->setValue("authtype", static_cast<int>(authtype));
+		settings->setValue("authorization", QVariant::fromValue(authorizationHeader));
+	settings->endGroup();
 	//TODO завершить все операции
 }
 
@@ -31,9 +41,9 @@ void YandexDiskManager::authorize()
 		authURL += "&client_id=" + appID;
 		//authURL += "&device_id=" + deviceID;
 		//authURL += "&device_name=" + deviceName;
-		QString label = QString::fromLocal8Bit("Введите код верификации. Его можно получить по указанной ссылке.\n");
-		label += authURL;
-		int verificationCode = QInputDialog::getInt(qApp->activeWindow(), QString::fromLocal8Bit("Авторизация"), label, 2336312, 0);
+		QString label = QString::fromLocal8Bit("Введите код верификации. Его можно получить <a href="); 
+		label += "\"" + authURL + "\"" + QString::fromLocal8Bit(">здесь</a>.\n");
+		int verificationCode = QInputDialog::getInt(qApp->activeWindow(), QString::fromLocal8Bit("Авторизация"), label, -1, 0);
 		if (verificationCode < 0) {
 			status = Status::Failed;
 			return;
@@ -129,7 +139,7 @@ bool YandexDiskManager::_checkForHTTPErrors(QNetworkReply *reply, const char* fi
 
 bool YandexDiskManager::authorized()
 {
-	return !authorizationHeader.isEmpty();
+	return !authorizationHeader.isEmpty();		//TODO check token lifetime
 }
 
 
@@ -138,12 +148,13 @@ bool YandexDiskManager::authorized()
 //=============================================================================
 void YandexDiskManager::downloadFile(QFileInfo file)
 {
-	if (file.isRelative()) file = QFileInfo(rootDir.absoluteFilePath(file.canonicalFilePath()));
-	if (!downloadingFile.isEmpty()) {
-		qDebug() << "YandexDiskManager::downloadFile(): WARNING: file ignored\n";
-		return;
-	}
-	QString relative = rootDir.relativeFilePath(file.canonicalFilePath());
+	auto dbg = file.absoluteFilePath();
+	dbg = file.canonicalFilePath();
+	dbg = file.filePath();
+	if (file.isRelative()) file = QFileInfo(rootDir.absoluteFilePath(file.filePath()));
+	dbg = file.canonicalFilePath();
+	dbg = file.absoluteFilePath();
+	QString relative = rootDir.relativeFilePath(file.absoluteFilePath());
 	QNetworkRequest request("https://webdav.yandex.ru/" + relative);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.get(request);
@@ -162,7 +173,7 @@ void YandexDiskManager::downloadFile(QFileInfo file)
 		hashCalculator.addData(&downloaded);
 		QByteArray fileHash = hashCalculator.result();
 		if (fileHash == MD5hash) ok = true;
-		if (!ok) qDebug() << "Хуйня";
+		if (!ok) qDebug() << QString::fromLocal8Bit("Хуйня");
 	});		
 
 }

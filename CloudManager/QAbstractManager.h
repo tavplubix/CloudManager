@@ -25,6 +25,7 @@ private:
 protected:
 	const QDir rootDir = "F:/Backups/CloudManager/";	//Hardcoded temporary
 	QAbstractManager::Status status;
+	QSettings *settings;
 	//============== Pure Virtual Prorected Methods ===================
 public: //debug
 	virtual void downloadFile(QFileInfo) = 0;
