@@ -7,10 +7,10 @@ void QAbstractManager::netLog(QNetworkReply *reply)
 	//log.open(QIODevice::Append);
 	log.write("\n======================= RESPONSE =========================\n");
 	int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-	QString status = "Status code: " + QString::number(code) + "\n";
+	log.write("Status code: " + QString::number(code).toLocal8Bit() + "\n");
 	QList<QByteArray> headers = reply->rawHeaderList();
 	for (auto i : headers) log.write(i + ": " + reply->rawHeader(i) + "\n");
-	log.write("\n");
+	log.write("BODY:\n");
 	log.write(reply->peek(2048));
 	log.write("\n==========================================================\n");
 }
@@ -20,9 +20,10 @@ void QAbstractManager::netLog(const QNetworkRequest &request, const QByteArray &
 	//static QFile log("network.log");
 	//log.open(QIODevice::Append);
 	log.write("\n======================== REQUEST =========================\n");
+	log.write("Requested URL: " + request.url().toString().toLocal8Bit() + "\n");
 	QList<QByteArray> headers = request.rawHeaderList();
 	for (auto i : headers) log.write(i + ": " + request.rawHeader(i) + "\n");
-	log.write("\n");
+	log.write("BODY:\n");
 	log.write(body);
 	log.write("\n==========================================================\n");
 }
@@ -46,6 +47,7 @@ void QAbstractManager::netLog(const QNetworkRequest &request, const QByteArray &
 QAbstractManager::QAbstractManager() : log("network.log")
 {
 	log.open(QIODevice::Append);
+	settings = new QSettings("tavplubix", "CloudManager");
 }
 
 
@@ -75,4 +77,5 @@ void QAbstractManager::syncAll()
 
 QAbstractManager::~QAbstractManager()
 {
+	delete settings;
 }

@@ -33,4 +33,5 @@
 #include <QSslConfiguration>
 #include <QSslKey>
 #include <QSsl>
+#include <QSettings>
 
