@@ -7,5 +7,11 @@ int main(int argc, char *argv[])
 	QApplication a(argc, argv);
 	MainCloudManager w;
 	w.show();
-	return a.exec();
+	try {
+		return a.exec();
+	}
+	catch (...) {
+		qDebug() << QString::fromLocal8Bit("exception");
+	}
+	return 0;
 }

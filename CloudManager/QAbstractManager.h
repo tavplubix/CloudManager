@@ -48,7 +48,7 @@ public:
 	void syncAll();
 	//============ Pure Virtual Public Methods ========================
 	//virtual void init() = 0;
-	//virtual qint64 spaceAvailable() = 0;		//in bites
+	virtual qint64 spaceAvailable() = 0;		//in bites
 	//virtual void downloadAllNew() = 0;
 	//virtual void uploadAllNew() = 0;
 	//virtual void addFile(QFileInfo) = 0;	//Pure?

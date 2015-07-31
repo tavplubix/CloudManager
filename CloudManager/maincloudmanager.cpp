@@ -20,6 +20,10 @@ void MainCloudManager::choose()
 {
 	QString f = QFileDialog::getOpenFileName();
 	ui.lineEdit->setText(f);
+	//disk.mkdir(QDir("testdir"));
+	//disk.remove(QFileInfo("IPinfo1420136602.txt"));
+	qint64 s = disk.spaceAvailable();
+	ui.lineEdit->setText(QString::number(s));
 }
 
 void MainCloudManager::download()

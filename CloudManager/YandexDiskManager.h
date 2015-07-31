@@ -27,7 +27,8 @@ protected:
 	//======================== Virtual Protected Methods =========================
 	virtual bool authorized() override final;
 	virtual void authorize() override final;
-	//virtual qint64 spaceAvailable() override final;
+public:
+	virtual qint64 spaceAvailable() override final;
 public: //debug
 	virtual void downloadFile(QFileInfo file) override final;
 	virtual void uploadFile(QFileInfo file) override final;

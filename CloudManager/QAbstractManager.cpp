@@ -13,6 +13,7 @@ void QAbstractManager::netLog(QNetworkReply *reply)
 	log.write("BODY:\n");
 	log.write(reply->peek(2048));
 	log.write("\n==========================================================\n");
+	log.flush();
 }
 
 void QAbstractManager::netLog(const QNetworkRequest &request, const QByteArray &body)
@@ -26,6 +27,7 @@ void QAbstractManager::netLog(const QNetworkRequest &request, const QByteArray &
 	log.write("BODY:\n");
 	log.write(body);
 	log.write("\n==========================================================\n");
+	log.flush();
 }
 
 
