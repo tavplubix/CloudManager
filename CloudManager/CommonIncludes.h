@@ -19,7 +19,10 @@
 #include <QJsonObject>
 #include <QCryptographicHash>
 #include <QMessageLogger>
-
+#include <QBuffer>
+#include <QThread>
+#include <QDomDocument>
+#include <QtConcurrent>
 
 
 
