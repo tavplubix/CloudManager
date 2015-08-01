@@ -4,7 +4,7 @@
 YandexDiskManager::YandexDiskManager()
 {
 	oauth = nullptr;
-	status = Status::Init;
+	m_status = Status::Init;
 	//restore settings
 	settings->beginGroup("yadisk");
 		authtype = static_cast<AuthType>( settings->value("aythtype", static_cast<int>(AuthType::OAuth)).toInt() );		// I really love static typing
@@ -13,7 +13,7 @@ YandexDiskManager::YandexDiskManager()
 	//есть смысл делать всё асинхронно
 	disk.connectToHostEncrypted("https://webdav.yandex.ru/");
 	//QSettings
-	if (!authorized()) QTimer::singleShot(0, this, &YandexDiskManager::authorize);
+	//if (!authorized()) QTimer::singleShot(0, this, &YandexDiskManager::authorize);
 }
 
 YandexDiskManager::~YandexDiskManager()
@@ -43,7 +43,7 @@ void YandexDiskManager::authorize()
 		label += "\"" + authURL + "\"" + QString::fromLocal8Bit(">здесь</a>.\n");
 		int verificationCode = QInputDialog::getInt(qApp->activeWindow(), QString::fromLocal8Bit("Авторизация"), label, -1, 0);
 		if (verificationCode < 0) {
-			status = Status::Failed;
+			m_status = Status::Failed;
 			return;
 		}
 
@@ -76,7 +76,8 @@ void YandexDiskManager::authorize()
 			if (ok) {
 				delete oauth;
 				oauth = nullptr;
-				status = Status::Ready;
+				m_status = Status::Ready;
+				emit done();
 			}
 			else {
 				QTimer::singleShot(1000, this, &YandexDiskManager::authorize);
@@ -87,7 +88,7 @@ void YandexDiskManager::authorize()
 
 
 
-qint64 YandexDiskManager::spaceAvailable()		//FIXME spaceAvailable()
+qint64 YandexDiskManager::spaceAvailable()	const	//FIXME spaceAvailable()
 //варианты:
 // 1 заблокировать поток, отправить запрос в другом потоке (Блокировка потока - плохо)
 // 2 добавить функцию updateAvailableSpace(), из этой ф-ции возвращать неактуальные данные
@@ -133,7 +134,7 @@ void YandexDiskManager::setAuthType(AuthType type)
 	authorize();
 }
 
-bool YandexDiskManager::_checkForHTTPErrors(QNetworkReply *reply, const char* file, const int line, const char* func)
+bool YandexDiskManager::_checkForHTTPErrors(QNetworkReply *reply, const char* file, const int line, const char* func) const
 {
 	netLog(reply);  //debug
 	int code = HTTPstatus(reply);
@@ -146,7 +147,7 @@ bool YandexDiskManager::_checkForHTTPErrors(QNetworkReply *reply, const char* fi
 	else return false;
 }
 
-bool YandexDiskManager::authorized()
+bool YandexDiskManager::authorized() const
 {
 	return !authorizationHeader.isEmpty();		//TODO check token lifetime
 }
@@ -181,8 +182,8 @@ void YandexDiskManager::downloadFile(QFileInfo file)
 		QByteArray fileHash = hashCalculator.result().toHex();
 		if (fileHash == MD5hash) ok = true;
 		if (!ok) qDebug() << QString::fromLocal8Bit("Хуйня");
-	});		
-
+		emit done();
+	});	
 }
 
 
@@ -214,9 +215,27 @@ void YandexDiskManager::uploadFile(QFileInfo file)	//FIXME segfault
 		if (statusCode == 201) {
 			reply->abort();
 			reply->deleteLater();
+			emit done();
 			return;
 		}
 	});
+}
+
+QDateTime YandexDiskManager::lastModified(QFileInfo file) const
+{
+	QString relative;
+	if (file.isAbsolute()) relative = rootDir.relativeFilePath(file.absoluteFilePath());
+	else relative = file.filePath();
+	QNetworkRequest request("https://webdav.yandex.ru/" + relative);
+	request.setRawHeader("Authorization", authorizationHeader);
+	QNetworkReply *reply = disk.head(request);
+	QEventLoop loop;
+	connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+	loop.exec();
+	checkForHTTPErrors(reply);
+	QByteArray time = reply->rawHeader("Last-Modified");
+	if (time.isEmpty()) return QDateTime::fromTime_t(0);
+	return QDateTime::fromString(time, Qt::RFC2822Date);
 }
 
 void YandexDiskManager::mkdir(QDir dir)
@@ -231,6 +250,7 @@ void YandexDiskManager::mkdir(QDir dir)
 	connect(reply, &QNetworkReply::finished, this, [=](){
 		checkForHTTPErrors(reply);
 		reply->deleteLater();
+		emit done();
 	});
 }
 
@@ -246,6 +266,7 @@ void YandexDiskManager::remove(QFileInfo file)
 	connect(reply, &QNetworkReply::finished, this, [=](){
 		checkForHTTPErrors(reply);
 		reply->deleteLater();
+		emit done();
 	});
 }
 

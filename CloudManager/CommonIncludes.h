@@ -1,6 +1,6 @@
 #pragma once
 #include <ctime>
-#include <functional>
+//#include <functional>
 
 #include <QString>
 #include <QFile>
@@ -17,13 +17,15 @@
 #include <QTimer>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
 #include <QCryptographicHash>
 #include <QMessageLogger>
 #include <QBuffer>
-#include <QThread>
-#include <QDomDocument>
-#include <QtConcurrent>
-
+#include <QSettings>
+//#include <QThread>
+//#include <QDomDocument>
+//#include <QtConcurrent>
+#include <QDateTime>
 
 
 
@@ -33,8 +35,7 @@
 
 
 //debug
-#include <QSslConfiguration>
-#include <QSslKey>
-#include <QSsl>
-#include <QSettings>
+//#include <QSslConfiguration>
+//#include <QSslKey>
+//#include <QSsl>
 
