@@ -24,27 +24,34 @@
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout">
-     <item row="0" column="1">
-      <widget class="QPushButton" name="chooseb">
-       <property name="text">
-        <string>Choose</string>
-       </property>
-      </widget>
-     </item>
      <item row="0" column="0">
-      <widget class="QLineEdit" name="lineEdit"/>
-     </item>
-     <item row="0" column="3">
-      <widget class="QPushButton" name="uploadb">
+      <widget class="QLabel" name="label">
        <property name="text">
-        <string>Upload</string>
+        <string>Файлы: </string>
        </property>
       </widget>
      </item>
-     <item row="0" column="4">
-      <widget class="QPushButton" name="downloadb">
+     <item row="1" column="0">
+      <widget class="QTableWidget" name="table"/>
+     </item>
+     <item row="3" column="0">
+      <widget class="QPushButton" name="remove">
        <property name="text">
-        <string>Download</string>
+        <string>Remove</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0">
+      <widget class="QPushButton" name="refresh">
+       <property name="text">
+        <string>Refresh</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="0">
+      <widget class="QPushButton" name="sync">
+       <property name="text">
+        <string>Sync</string>
        </property>
       </widget>
      </item>

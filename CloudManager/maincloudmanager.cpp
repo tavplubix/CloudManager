@@ -5,35 +5,57 @@ MainCloudManager::MainCloudManager(QWidget *parent)
 {
 	ui.setupUi(this);
 	ui.centralWidget->setLayout(ui.gridLayout);
-	connect(ui.chooseb, &QPushButton::clicked, this, &MainCloudManager::choose);
-	connect(ui.uploadb, &QPushButton::clicked, this, &MainCloudManager::upload);
-	connect(ui.downloadb, &QPushButton::clicked, this, &MainCloudManager::download);
-
+	stroages.push_back(new YandexDiskManager);
+	//stroages.push_back(new OneDriveManager);
+	ui.table->setColumnCount(3);
+	for(auto i : stroages)
+		i->init();
+	QFileInfoList files = rootDir.entryInfoList();
+	for (auto i : stroages)
+		for (auto j : files)
+			if (j.isFile())
+				i->addFile(j);
+	connect(ui.refresh, &QPushButton::clicked, this, &MainCloudManager::refresh);
+	connect(ui.remove, &QPushButton::clicked, this, &MainCloudManager::remove);
+	connect(ui.sync, &QPushButton::clicked, this, &MainCloudManager::sync);
 }
 
 MainCloudManager::~MainCloudManager()
 {
-
+	for (auto i : stroages)
+		delete i;
 }
 
-void MainCloudManager::choose()
+void MainCloudManager::refresh()
 {
-	QString f = QFileDialog::getOpenFileName();
-	ui.lineEdit->setText(f);
-	//disk.mkdir(QDir("testdir"));
-	//disk.remove(QFileInfo("IPinfo1420136602.txt"));
-	qint64 s = disk.spaceAvailable();
-	ui.lineEdit->setText(QString::number(s));
+	QAbstractManager *i = stroages.first();
+	QStringList files = i->managedFiles();
+	ui.table->setRowCount(files.size());
+	int row = 0;
+	for (auto j : files) {
+		QTableWidgetItem *name = new QTableWidgetItem(j);
+		QTableWidgetItem *ctime = new QTableWidgetItem(i->lastModified(j).toString());
+		QTableWidgetItem *ltime = new QTableWidgetItem(QFileInfo(j).lastModified().toString());
+		ui.table->setItem(row, 0, name);
+		ui.table->setItem(row, 1, ltime);
+		ui.table->setItem(row, 2, ctime);
+		row++;
+	}
 }
 
-void MainCloudManager::download()
+void MainCloudManager::remove()
 {
-	QFileInfo f = ui.lineEdit->text();
-	disk.downloadFile(f);
+	int n = ui.table->currentRow();
+	QString file = stroages.first()->managedFiles().at(n);
+	stroages.first()->removeFile(file);
+	refresh();
 }
 
-void MainCloudManager::upload()
+void MainCloudManager::sync()
 {
-	QFileInfo f = ui.lineEdit->text();
-	disk.uploadFile(f);
+	for (auto i : stroages)
+		i->syncAll();
+	refresh();
+	//stroages.first()->uploadFile(QString("uploadtest.txt"));
 }
+
