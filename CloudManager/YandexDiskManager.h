@@ -25,25 +25,22 @@ private:
 	bool _checkForHTTPErrors(QNetworkReply *reply, const char* file, const int line, const char* func) const;
 protected:
 	//======================== Virtual Protected Methods =========================
-	virtual bool authorized() const override final;
-	virtual void authorize() override final;
-	virtual QString managerID() const override { return "42"; };
-public: //debug
-	virtual qint64 spaceAvailable() const override final;
-	virtual void downloadFile(QFileInfo file) override final;
-	virtual void uploadFile(QFileInfo file) override final;
-	virtual QDateTime lastModified(QFileInfo file) const override final;
-
-	//============================ Protected Methods ==============================
-	void mkdir(QDir dir);
-	virtual void remove(QFileInfo file) override final;
+	bool authorized() const override final;
+	QNetworkReply* authorize() override final;
+	QString managerID() const override { return "42"; };
+	qint64 spaceAvailable() const override final;
+	QNetworkReply* downloadFile(const QString& name, QIODevice* file) override final;
+	QNetworkReply* uploadFile(const QString& name, QIODevice* file) override final;
+	QDateTime lastModified(QFileInfo file) const override final;
+	QNetworkReply* remove(const QString& name) override final;
+	virtual void mkdir(QDir dir);
 
 
 public:
 	//=========================== Public Methods =================================
 	YandexDiskManager();
 	~YandexDiskManager();
-	YandexDiskManager::AuthType authType() { return authtype; }
+	YandexDiskManager::AuthType authType() const { return authtype; }
 	void setAuthType(YandexDiskManager::AuthType type);
 
 	//=========================== Private Qt Slots ===============================

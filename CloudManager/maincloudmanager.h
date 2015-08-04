@@ -16,12 +16,13 @@ public:
 	~MainCloudManager();
 
 private:
-	YandexDiskManager disk;
+	QList<QAbstractManager*> stroages;
 	Ui::MainCloudManagerClass ui;
-	private slots:
-	void choose();
-	void download();
-	void upload();
+	const QDir rootDir = "F:/Backups/CloudManager/";	//Hardcoded temporary
+private slots:
+	void refresh();
+	void remove();
+	void sync();
 };
 
 #endif // MAINCLOUDMANAGER_H
