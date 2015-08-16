@@ -31,7 +31,6 @@ protected:
 	qint64 spaceAvailable() const override final;
 	const QNetworkReply* downloadFile(const ShortName& name, QSharedPointer<QIODevice> file) override final;
 	const QNetworkReply* uploadFile(const ShortName& name, QIODevice* file) override final;
-	QDateTime lastModified(const ShortName& name) const override final;
 	const QNetworkReply* remove(const ShortName& name) override final;
 	virtual void mkdir(QDir dir);
 
@@ -42,6 +41,9 @@ public:
 	~YandexDiskManager();
 	YandexDiskManager::AuthType authType() const { return authtype; }
 	void setAuthType(YandexDiskManager::AuthType type);
+
+	QDateTime lastModified(const ShortName& name) const override final;
+	QByteArray remoteMD5FileHash(const ShortName& filename) const override final;
 
 	//=========================== Private Qt Slots ===============================
 private slots:

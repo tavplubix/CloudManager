@@ -1,4 +1,9 @@
 #include "ConfigFile.h"
+#include "QAbstractManager.h"
+#include "FileClasses.h"
+
+
+const ShortName ConfigFile::configFileName = ".cloudmanager";
 
 
 void ConfigFile::invalidConfig()

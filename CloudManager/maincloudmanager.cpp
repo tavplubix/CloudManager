@@ -1,4 +1,5 @@
 #include "maincloudmanager.h"
+#include "FileClasses.h"
 
 MainCloudManager::MainCloudManager(QWidget *parent)
 	: QMainWindow(parent)
@@ -29,7 +30,7 @@ MainCloudManager::~MainCloudManager()
 void MainCloudManager::refresh()
 {
 	QAbstractManager *i = stroages.first();
-	QStringList files = i->managedFiles();
+	QList<LongName> files = i->managedFiles();
 	ui.table->setRowCount(files.size());
 	int row = 0;
 	for (auto j : files) {

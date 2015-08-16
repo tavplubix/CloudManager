@@ -26,6 +26,9 @@ ShortName::ShortName(const QString& s)
 	}
 }
 
+ShortName::ShortName(const LongName& ln)
+	: ShortName((QString)ln) {}
+
 LongName::LongName(const QString& s)
 {
 	QFileInfo file(s);
@@ -47,3 +50,6 @@ LongName::LongName(const QString& s)
 	}
 
 }
+
+LongName::LongName(const ShortName& sn)
+	: LongName( (QString)sn ) {}

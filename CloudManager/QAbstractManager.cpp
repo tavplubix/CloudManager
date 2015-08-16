@@ -1,5 +1,8 @@
 #include "QAbstractManager.h"
 
+#include "FileClasses.h"
+#include "ConfigFile.h"
+
 
 void QAbstractManager::netLog(QNetworkReply *reply) const
 {
@@ -47,40 +50,25 @@ void QAbstractManager::waitFor(const QNetworkReply* reply) const
 	else loop.exec();
 }
 
-void QAbstractManager::pushChangedFiles()	//WARNING добавить проверку на ошибки
-{
-	for (auto i : changedFiles)
-		uploadFile(i, new QFile(i));
-}
+//void QAbstractManager::pushChangedFiles()	//WARNING добавить проверку на ошибки
+//{
+//	for (auto i : changedFiles)
+//		uploadFile(i, new QFile(i));
+//}
+//
+//void QAbstractManager::pullChangedFiles()	//WARNING добавить проверку на ошибки
+//{
+//	for (auto i : changedFiles)
+//		downloadFile(i, new QFile(i));
+//}
 
-void QAbstractManager::pullChangedFiles()	//WARNING добавить проверку на ошибки
-{
-	for (auto i : changedFiles)
-		downloadFile(i, new QFile(i));
-}
 
-
-
-void QAbstractManager::updateConfig()
-{
-	waitFor(lock());
-	ShortNameSet cfgRemote, removed;
-	QJsonObject config = getConfigJSON();
-	QJsonArray files = config.value("managedFiles").toArray();
-	for (auto i : files)
-		cfgRemote.insert(i.toString());
-	QJsonArray removedFiles = config.value("removed").toArray();
-	remote -= removed;
-	local -= removed;
-	remote = (remote - removed) + cfgRemote;
-
-	unlock();
-}
 
 QAbstractManager::QAbstractManager() : log("network.log")
 {
 	log.open(QIODevice::Append);
 	settings = new QSettings("tavplubix", "CloudManager");		//WARNING разным манагерам нужны разные настройки
+	config = nullptr;
 	m_status = Status::Init;
 	action = ActionWithChanged::SaveNewest;
 }
@@ -90,21 +78,12 @@ void QAbstractManager::init()
 {
 	if (!authorized()) 
 		waitFor( authorize() );
-	QJsonArray files = getConfigJSON().value("managedFiles").toArray();
-	for (auto i : files)
-		remote.insert(i.toString());
+	config = new ConfigFile(this);
+	
 	//settings->beginGroup(managerID());
-	local = settings->value("managedFiles", QVariant::fromValue(ShortNameSet())).value<ShortNameSet>();
+	//local = settings->value("managedFiles", QVariant::fromValue(ShortNameSet())).value<ShortNameSet>();
 	//settings->endGroup();
-	newLocalFiles = (localFiles.toSet() - cloudFiles.toSet() ).toList();			//OPTIMIZE
-	newCloudFiles = (cloudFiles.toSet() - localFiles.toSet() ).toList();
-	auto oldFiles = (localFiles.toSet() & cloudFiles.toSet()).toList();
 	//сравнить файлы, время последнего изменения
-	for (auto i : oldFiles) {		//OPTIMIZE saveNewest
-		auto local = QFileInfo(i).lastModified();
-		auto cloud = lastModified(i);
-		if (local != cloud) changedFiles.push_back(i);		
-	}
 	m_status = Status::Ready;
 }
 
@@ -118,110 +97,93 @@ void QAbstractManager::setActionWithChanged(ActionWithChanged act)
 	action = act;
 }
 
-QStringList QAbstractManager::managedFiles() const
+QList<LongName> QAbstractManager::managedFiles() const
 {
-	return (localFiles.toSet() + cloudFiles.toSet()).toList();
+	auto tmp = config->filesInTheCloud().toList();
+	QList<LongName> result;
+	for (auto i : tmp) result.push_back(i);
+	return result;
 }
 
-void QAbstractManager::syncAll()
+QByteArray QAbstractManager::localMD5FileHash(const LongName& filename)
 {
-	downloadAllNew();		//WARNING
-	uploadAllNew();			//WARNING
-	switch (action) {
-	case ActionWithChanged::Pull :
-		pullChangedFiles();
-		break;
-	case ActionWithChanged::Push :
-		pushChangedFiles();
-		break;
-	case ActionWithChanged::SaveNewest :
-		for (auto i : changedFiles) {		//OPTIMIZE saveNewest
-			auto local = QFileInfo(i).lastModified();
-			auto cloud = lastModified(i);
-			if (local < cloud) downloadFile(i, new QFile(i));	//WARNING добавить проверку на ошибки
-			else uploadFile(i, new QFile(i));
+	QCryptographicHash hash(QCryptographicHash::Md5);
+	QFile file(filename);
+	file.open(QIODevice::ReadOnly);
+	hash.addData(&file);
+	file.close();
+#if DEBUG
+	return hash.result().toHex();
+#else
+	return hash.result();
+#endif
+}
+
+
+
+void QAbstractManager::syncAll()		//FIXME
+{
+	auto files = config->filesInTheCloud();
+	for (auto remote : files) {
+		LongName local = remote;
+		QFileInfo localInfo = local;
+		if (!localInfo.exists())
+			downloadFile(remote, new QFile(local));
+		else if (localMD5FileHash(local) != remoteMD5FileHash(remote)) {
+			QDateTime ltime = localInfo.lastModified();
+			QDateTime rtime = lastModified(remote);
+			if (rtime < ltime) uploadFile(remote, new QFile(local));
+			else downloadFile(remote, new QFile(local));
 		}
-		break;
+		//else file has not been changed
 	}
-}
 
-void QAbstractManager::downloadAllNew()		//WARNING добавить проверку на ошибки
+}
+//
+//void QAbstractManager::downloadAllNew()		//WARNING добавить проверку на ошибки
+//{
+//	for (auto i : newCloudFiles) {
+//		downloadFile(i, new QFile(i));
+//		localFiles.push_back(i);
+//	}
+//	newCloudFiles.clear();		//WARNING нельзя очищать список, если не уверены в том, что все файлы скачались
+//}
+//
+//void QAbstractManager::uploadAllNew()	//WARNING добавить проверку на ошибки
+//{
+//	QString configFileName = rootDir.absoluteFilePath(".cloudmanager" + managerID());
+//	QFile configFile(rootDir.absoluteFilePath(configFileName));
+//	configFile.open(QIODevice::ReadWrite);
+//	QJsonObject config = QJsonDocument::fromJson(configFile.readAll()).object();
+//	QJsonArray files = config.value("managedFiles").toArray();
+//	for (auto i : newLocalFiles) {
+//		uploadFile(i,  new QFile(i));
+//		cloudFiles.push_back(i);
+//
+//		files.push_back(i);
+//		config.insert("managedFiles", files);
+//	}
+//	configFile.resize(0);
+//	configFile.write(QJsonDocument(config).toJson());
+//	configFile.close();
+//	uploadFile(configFileName, new QFile(configFileName));
+//	newCloudFiles.clear();		//WARNING нельзя очищать список, если не уверены в том, что все файлы загрузились
+//}
+
+void QAbstractManager::addFile(QFileInfo file)		//FIXME will not work in offline mode
 {
-	for (auto i : newCloudFiles) {
-		downloadFile(i, new QFile(i));
-		localFiles.push_back(i);
-	}
-	newCloudFiles.clear();		//WARNING нельзя очищать список, если не уверены в том, что все файлы скачались
+	LongName name = file.absoluteFilePath();
+	config->addFile(name);
+	uploadFile(name, new QFile(name));
 }
 
-void QAbstractManager::uploadAllNew()	//WARNING добавить проверку на ошибки
+void QAbstractManager::removeFile(QFileInfo file)	//FIXME will not work in offline mode
 {
-	QString configFileName = rootDir.absoluteFilePath(".cloudmanager" + managerID());
-	QFile configFile(rootDir.absoluteFilePath(configFileName));
-	configFile.open(QIODevice::ReadWrite);
-	QJsonObject config = QJsonDocument::fromJson(configFile.readAll()).object();
-	QJsonArray files = config.value("managedFiles").toArray();
-	for (auto i : newLocalFiles) {
-		uploadFile(i,  new QFile(i));
-		cloudFiles.push_back(i);
-
-		files.push_back(i);
-		config.insert("managedFiles", files);
-	}
-	configFile.resize(0);
-	configFile.write(QJsonDocument(config).toJson());
-	configFile.close();
-	uploadFile(configFileName, new QFile(configFileName));
-	newCloudFiles.clear();		//WARNING нельзя очищать список, если не уверены в том, что все файлы загрузились
+	LongName name = file.absoluteFilePath();
+	config->removeFile(name);
 }
 
-void QAbstractManager::addFile(QFileInfo file)
-{
-	QString absolute;
-	if (file.isRelative()) absolute = rootDir.absoluteFilePath(file.filePath());
-	else absolute = file.absoluteFilePath();
-	if (localFiles.contains(absolute)) return;
-	localFiles.push_back(absolute);
-	uploadFile(rootDir.relativeFilePath(file.absoluteFilePath()), new QFile(rootDir.relativeFilePath(file.absoluteFilePath())));		//WARNING
-	cloudFiles.push_back(absolute);
-	QString configFileName = rootDir.absoluteFilePath(".cloudmanager" + managerID());
-	QFile configFile(rootDir.absoluteFilePath(configFileName));
-	configFile.open(QIODevice::ReadOnly);
-	QJsonObject config = QJsonDocument::fromJson(configFile.readAll()).object();
-	QJsonArray files = config.value("managedFiles").toArray();
-	files.push_back(absolute);
-	config.insert("managedFiles", files);
-	configFile.resize(0);
-	configFile.write(QJsonDocument(config).toJson());
-	configFile.close();
-	uploadFile(configFileName, new QFile(configFileName));
-}
-
-void QAbstractManager::removeFile(QFileInfo file)	//WARNING
-{
-	QString absolute;
-	if (file.isRelative()) absolute = rootDir.absoluteFilePath(file.filePath());
-	else absolute = file.absoluteFilePath();
-	localFiles.removeAll(absolute);
-	newLocalFiles.removeAll(absolute);
-	newCloudFiles.removeAll(absolute);
-	changedFiles.removeAll(absolute);
-	remove(rootDir.relativeFilePath(absolute));
-	cloudFiles.removeAll(absolute);
-	QString configFileName = rootDir.absoluteFilePath(".cloudmanager" + managerID());
-	QFile configFile(rootDir.absoluteFilePath(configFileName));
-	configFile.open(QIODevice::ReadOnly);
-	QJsonObject config = QJsonDocument::fromJson(configFile.readAll()).object();
-	QJsonArray files = config.value("managedFiles").toArray();
-	files.removeAt([&]() -> int {for (int i = 0; i < files.size(); i++) if (files.at(i) == absolute) return i; return -1;}());
-	config.insert("managedFiles", files);
-	configFile.resize(0);
-	configFile.write(QJsonDocument(config).toJson());
-	configFile.close();
-	uploadFile(configFileName, new QFile(configFileName));
-}
-
-void QAbstractManager::removeFileData(QFileInfo)
+void QAbstractManager::removeFileData(QFileInfo)	//TODO implement
 {
 	qDebug() << "Not Implemented";
 	throw NotImplemented();
@@ -230,7 +192,7 @@ void QAbstractManager::removeFileData(QFileInfo)
 QAbstractManager::~QAbstractManager()
 {
 	//settings->beginGroup(managerID());
-	settings->setValue("managedFiles", QVariant::fromValue(localFiles));
+	//settings->setValue("managedFiles", QVariant::fromValue(localFiles));
 	//settings->endGroup();
 	delete settings;
 }
