@@ -26,13 +26,13 @@ private:
 protected:
 	//======================== Virtual Protected Methods =========================
 	bool authorized() const override final;
-	QNetworkReply* authorize() override final;
+	const QNetworkReply* authorize() override final;
 	QString managerID() const override { return "42"; };
 	qint64 spaceAvailable() const override final;
-	QNetworkReply* downloadFile(const QString& name, QIODevice* file) override final;
-	QNetworkReply* uploadFile(const QString& name, QIODevice* file) override final;
-	QDateTime lastModified(QFileInfo file) const override final;
-	QNetworkReply* remove(const QString& name) override final;
+	const QNetworkReply* downloadFile(const ShortName& name, QSharedPointer<QIODevice> file) override final;
+	const QNetworkReply* uploadFile(const ShortName& name, QIODevice* file) override final;
+	QDateTime lastModified(const ShortName& name) const override final;
+	const QNetworkReply* remove(const ShortName& name) override final;
 	virtual void mkdir(QDir dir);
 
 

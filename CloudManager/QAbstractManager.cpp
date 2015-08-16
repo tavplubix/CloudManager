@@ -3,6 +3,7 @@
 
 void QAbstractManager::netLog(QNetworkReply *reply) const
 {
+#if NETLOG
 	//static QFile log("network.log");
 	//log.open(QIODevice::Append);
 	log.write("\n======================= RESPONSE =========================\n");
@@ -14,10 +15,12 @@ void QAbstractManager::netLog(QNetworkReply *reply) const
 	log.write(reply->peek(reply->bytesAvailable() < 128 ? reply->bytesAvailable():128));
 	log.write("\n==========================================================\n");
 	log.flush();
+#endif
 }
 
 void QAbstractManager::netLog(const QByteArray& type, const QNetworkRequest &request, const QByteArray &body) const
 {
+#if NETLOG
 	//static QFile log("network.log");
 	//log.open(QIODevice::Append);
 	log.write("\n======================== REQUEST =========================\n");
@@ -28,8 +31,21 @@ void QAbstractManager::netLog(const QByteArray& type, const QNetworkRequest &req
 	log.write(body);
 	log.write("\n==========================================================\n");
 	log.flush();
+#endif
 }
 
+
+void QAbstractManager::waitFor(const QNetworkReply* reply) const
+{
+	if (reply == nullptr) {
+		qDebug() << "WARNING: reply == nullptr";
+		return;
+	}
+	/*static*/ QEventLoop loop;
+	connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+	if (reply->isFinished()) return;
+	else loop.exec();
+}
 
 void QAbstractManager::pushChangedFiles()	//WARNING добавить проверку на ошибки
 {
@@ -43,25 +59,28 @@ void QAbstractManager::pullChangedFiles()	//WARNING добавить проверку на ошибки
 		downloadFile(i, new QFile(i));
 }
 
-/*QSslConfiguration QAbstractManager::sslconf_DEBUG_ONLY()
+
+
+void QAbstractManager::updateConfig()
 {
-	const QString privateKeyFile = "key.pem";
-	//const QByteArray password = "wireshark";
-	QFile f(privateKeyFile);
-	f.open(QIODevice::ReadOnly);
-	QByteArray k = f.readAll();
-	QSslKey key(k, QSsl::KeyAlgorithm::Rsa, QSsl::EncodingFormat::Pem, QSsl::KeyType::PrivateKey);
-	if (key.isNull()) throw "xyu";
-	QSslConfiguration conf = QSslConfiguration::defaultConfiguration();
-	conf.setPrivateKey(key);
-	if (conf.isNull()) throw "xyu";
-	return conf;
-}*/
+	waitFor(lock());
+	ShortNameSet cfgRemote, removed;
+	QJsonObject config = getConfigJSON();
+	QJsonArray files = config.value("managedFiles").toArray();
+	for (auto i : files)
+		cfgRemote.insert(i.toString());
+	QJsonArray removedFiles = config.value("removed").toArray();
+	remote -= removed;
+	local -= removed;
+	remote = (remote - removed) + cfgRemote;
+
+	unlock();
+}
 
 QAbstractManager::QAbstractManager() : log("network.log")
 {
 	log.open(QIODevice::Append);
-	settings = new QSettings("tavplubix", "CloudManager");
+	settings = new QSettings("tavplubix", "CloudManager");		//WARNING разным манагерам нужны разные настройки
 	m_status = Status::Init;
 	action = ActionWithChanged::SaveNewest;
 }
@@ -69,28 +88,14 @@ QAbstractManager::QAbstractManager() : log("network.log")
 
 void QAbstractManager::init()
 {
-	QEventLoop loop;
-	connect(this, &QAbstractManager::done, &loop, &QEventLoop::quit);
-	if (!this->authorized()) {
-		this->authorize();
-		loop.exec();
-	}
-	QString configFileName = rootDir.absoluteFilePath(".cloudmanager" + managerID());
-	this->downloadFile(configFileName, new QFile(configFileName));		//TODO use buffer
-	loop.exec();
-	QFile configFile(rootDir.absoluteFilePath(configFileName));
-	if (configFile.size() == 0) {
-		configFile.open(QIODevice::WriteOnly);
-		configFile.write("{\"managedFiles\":[]}");
-		configFile.close();
-		this->uploadFile(configFileName, new QFile(configFileName));
-	}
-	configFile.open(QIODevice::ReadOnly);
-	QJsonObject config = QJsonDocument::fromJson(configFile.readAll()).object();
-	QJsonArray files = config.value("managedFiles").toArray();
-	for (auto i : files) 
-		cloudFiles.push_back(i.toString());
-	localFiles = settings->value("managedFiles", QVariant::fromValue(QStringList())).value<QStringList>();
+	if (!authorized()) 
+		waitFor( authorize() );
+	QJsonArray files = getConfigJSON().value("managedFiles").toArray();
+	for (auto i : files)
+		remote.insert(i.toString());
+	//settings->beginGroup(managerID());
+	local = settings->value("managedFiles", QVariant::fromValue(ShortNameSet())).value<ShortNameSet>();
+	//settings->endGroup();
 	newLocalFiles = (localFiles.toSet() - cloudFiles.toSet() ).toList();			//OPTIMIZE
 	newCloudFiles = (cloudFiles.toSet() - localFiles.toSet() ).toList();
 	auto oldFiles = (localFiles.toSet() & cloudFiles.toSet()).toList();
@@ -216,8 +221,16 @@ void QAbstractManager::removeFile(QFileInfo file)	//WARNING
 	uploadFile(configFileName, new QFile(configFileName));
 }
 
+void QAbstractManager::removeFileData(QFileInfo)
+{
+	qDebug() << "Not Implemented";
+	throw NotImplemented();
+}
+
 QAbstractManager::~QAbstractManager()
 {
+	//settings->beginGroup(managerID());
 	settings->setValue("managedFiles", QVariant::fromValue(localFiles));
+	//settings->endGroup();
 	delete settings;
 }
