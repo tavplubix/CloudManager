@@ -27,7 +27,7 @@ YandexDiskManager::~YandexDiskManager()
 }
 
 
-QNetworkReply* YandexDiskManager::authorize()
+const QNetworkReply* YandexDiskManager::authorize()
 {
 	if (authtype == AuthType::Basic) {
 		qDebug() << "Basic authorization isn't implemented\n";
@@ -44,7 +44,7 @@ QNetworkReply* YandexDiskManager::authorize()
 		int verificationCode = QInputDialog::getInt(qApp->activeWindow(), QString::fromLocal8Bit("Авторизация"), label, -1, 0);
 		if (verificationCode < 0) {
 			m_status = Status::Failed;
-			return;
+			return nullptr;
 		}
 
 		//Запрос токена
@@ -85,6 +85,7 @@ QNetworkReply* YandexDiskManager::authorize()
 		} );
 		return reply;
 	}
+	return nullptr;
 }
 
 
@@ -94,7 +95,8 @@ qint64 YandexDiskManager::spaceAvailable()	const	//FIXME spaceAvailable()
 // 1 заблокировать поток, отправить запрос в другом потоке (Блокировка потока - плохо)
 // 2 добавить функцию updateAvailableSpace(), из этой ф-ции возвращать неактуальные данные
 // 3 возвращать значение сигналом (хуйня?)
-// 4 осилить XMPP (второй вариант + получать уведомления об изменении доступного объёма, инфа актуальна)  -  xmpp _СЛИШКОМ_ ебаный, лучше ВРЕМЕННО закостылять первым способом
+// 4 осилить XMPP (второй вариант + получать уведомления об изменении доступного объёма, инфа актуальна) 
+// xmpp _СЛИШКОМ_ ебаный, лучше ВРЕМЕННО закостылять первым способом
 {
 	
 	QNetworkRequest request(QUrl("https://webdav.yandex.ru/"));
@@ -103,14 +105,10 @@ qint64 YandexDiskManager::spaceAvailable()	const	//FIXME spaceAvailable()
 	QByteArray body = "<propfind xmlns=\"DAV:\"> <prop> <quota-available-bytes/> <quota-used-bytes/> </prop> </propfind>";
 	QBuffer *buf = new QBuffer;
 	buf->setData(body);
-	QNetworkReply *reply = disk.sendCustomRequest(request, "PROPFIND", buf);
+	QNetworkReply *reply = disk.sendCustomRequest(request, "PROPFIND", buf);		//WARNING
 	netLog("PROPFIND", request, body);
 	buf->setParent(reply);
-
-	QEventLoop loop;
-	connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-	loop.exec();
-
+	waitFor(reply);
 
 	checkForHTTPErrors(reply);
 	QByteArray response = reply->readAll();
@@ -155,12 +153,9 @@ bool YandexDiskManager::authorized() const
 
 
 
-QNetworkReply* YandexDiskManager::downloadFile(const QString& name, QIODevice* file)
+const QNetworkReply* YandexDiskManager::downloadFile(const ShortName& name, QSharedPointer<QIODevice> file)
 {
-	
-	//if (name.isRelative()) name = QFileInfo(rootDir.absoluteFilePath(name.filePath()));
-	//QString relative = rootDir.relativeFilePath(name.absoluteFilePath());
-	QNetworkRequest request("https://webdav.yandex.ru/" + name/*relative*/);
+	QNetworkRequest request("https://webdav.yandex.ru/" + name);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.get(request);
 	netLog("GET", request, "EMPTY");	//DEBUG
@@ -175,26 +170,22 @@ QNetworkReply* YandexDiskManager::downloadFile(const QString& name, QIODevice* f
 		file->close();
 		//check md5
 		QCryptographicHash hashCalculator(QCryptographicHash::Algorithm::Md5);
-		file->open(QIODevice::ReadOnly);		//WARNING а если это не файл?
-		hashCalculator.addData(file);
+		file->open(QIODevice::ReadOnly);		
+		hashCalculator.addData(file.data());
 		file->close();
 		QByteArray fileHash = hashCalculator.result().toHex();
 		if (fileHash == MD5hash) ok = true;
 		if (!ok) qDebug() << QString::fromLocal8Bit("Хуйня");
-		delete file;
 		emit done();
 	});	
 	return reply;
 }
 
 
-QNetworkReply* YandexDiskManager::uploadFile(const QString& name, QIODevice* file)	
+const QNetworkReply* YandexDiskManager::uploadFile(const ShortName& name, QIODevice* file)
 {
 	//WARNING может не работать для файлов не в корне
-	//QString relative;
-	//if (file.isAbsolute()) relative = rootDir.relativeFilePath(file.absoluteFilePath());
-	//else relative = file.filePath();
-	QNetworkRequest request("https://webdav.yandex.ru/" + name/*relative*/);
+	QNetworkRequest request("https://webdav.yandex.ru/" + name);
 	request.setRawHeader("Authorization", authorizationHeader);
 	//QFile *f = //new QFile(name/*file.absoluteFilePath()*/);
 	file->open(QIODevice::ReadOnly);
@@ -218,8 +209,7 @@ QNetworkReply* YandexDiskManager::uploadFile(const QString& name, QIODevice* fil
 		if (statusCode == 100) return;
 		if (statusCode == 201) {
 			reply->abort();
-			reply->deleteLater();
-			delete file;	//WARNING утечка памяти в случае ошибки (не 201)
+			reply->deleteLater();	//WARNING утечка памяти в случае ошибки (не 201 и не 100)
 			emit done();
 			return;
 		}
@@ -227,18 +217,13 @@ QNetworkReply* YandexDiskManager::uploadFile(const QString& name, QIODevice* fil
 	return reply;
 }
 
-QDateTime YandexDiskManager::lastModified(QFileInfo file) const
+QDateTime YandexDiskManager::lastModified(const ShortName& name) const
 {
-	QString relative;
-	if (file.isAbsolute()) relative = rootDir.relativeFilePath(file.absoluteFilePath());
-	else relative = file.filePath();
-	QNetworkRequest request("https://webdav.yandex.ru/" + relative);
+	QNetworkRequest request("https://webdav.yandex.ru/" + name);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.head(request);
 	netLog("HEAD", request, "EMPTY");
-	QEventLoop loop;
-	connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-	loop.exec();
+	waitFor(reply);
 	checkForHTTPErrors(reply);
 	QByteArray time = reply->rawHeader("Last-Modified");
 	if (time.isEmpty()) return QDateTime::fromTime_t(0);
@@ -261,12 +246,9 @@ void YandexDiskManager::mkdir(QDir dir)
 	});
 }
 
-QNetworkReply* YandexDiskManager::remove(const QString& name)
+const QNetworkReply* YandexDiskManager::remove(const ShortName& name)
 {
-	//QString relative;
-	//if (name.isAbsolute()) relative = rootDir.relativeFilePath(name.absoluteFilePath());
-	//else relative = name.filePath();
-	QNetworkRequest request("https://webdav.yandex.ru/" + name/*relative*/);
+	QNetworkRequest request("https://webdav.yandex.ru/" + name);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.sendCustomRequest(request, "DELETE");
 	netLog("DELETE", request, "EMPTY");	//DEBUG

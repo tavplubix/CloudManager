@@ -26,7 +26,8 @@
 //#include <QDomDocument>
 //#include <QtConcurrent>
 #include <QDateTime>
-
+#include <QSharedPointer>
+#include <QException>
 
 
 
