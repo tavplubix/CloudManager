@@ -28,15 +28,11 @@
 #include <QDateTime>
 #include <QSharedPointer>
 #include <QException>
+#include <QDebug>
 
 
 
 
 
 
-
-//debug
-//#include <QSslConfiguration>
-//#include <QSslKey>
-//#include <QSsl>
 

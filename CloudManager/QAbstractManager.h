@@ -1,7 +1,5 @@
 #pragma once
 #include "CommonIncludes.h"
-#include "FileClasses.h"
-#include "ConfigFile.h"
 #include <QObject>
 //================ Network Includes ======================
 #include <QNetworkAccessManager>
@@ -22,6 +20,10 @@
 
 //EXCEPTIONS
 class FatalError : QException {};
+class ShortName;
+class LongName;
+class ConfigFile;
+
 
 
 class QAbstractManager 
@@ -39,11 +41,12 @@ private:
 	//QStringList changedFiles, newLocalFiles, newCloudFiles;
 	QAbstractManager::ActionWithChanged action;
 	mutable QFile log;
+	ConfigFile *config;
 	//===================== Private Methods ===========================
 	//void compareFiles(); 
 	const QNetworkReply* downloadFile(const ShortName& name, QIODevice* file) { QSharedPointer<QIODevice> tmp(file);  return downloadFile(name, tmp); }
-	virtual void pushChangedFiles();
-	virtual void pullChangedFiles();
+	//virtual void pushChangedFiles();
+	//virtual void pullChangedFiles();
 	//void updateConfig();
 protected:
 	//===================== Protected Fields ==========================
@@ -61,9 +64,9 @@ protected:
 	virtual const QNetworkReply* uploadFile(const ShortName& name, QIODevice* file) = 0;		//становится влдельцем file
 	virtual const QNetworkReply* remove(const ShortName& name) = 0;
 	//блокировать один файл или весть сервис целиком? (блокировка файла конфигурации == блокировка сервиса)
-	virtual const QNetworkReply* lockFile(const ShortName& name /*= configFileName*/) { qDebug() << "WARNING: lockFile() is not implemented\n"; }
-	virtual const QNetworkReply* unlockFile(const ShortName& name /*= configFileName*/) { qDebug() << "WARNING: unlockFile() is not implemented\n"; }
-	virtual bool fileLocked(const ShortName& name /*= configFileName*/) const { qDebug() << "WARNING: fileLocked() is not implemented\n"; }
+	virtual const QNetworkReply* lockFile(const ShortName& name /*= configFileName*/) { qDebug() << "WARNING: lockFile() is not implemented\n"; return nullptr; }
+	virtual const QNetworkReply* unlockFile(const ShortName& name /*= configFileName*/) { qDebug() << "WARNING: unlockFile() is not implemented\n"; return nullptr; }
+	virtual bool fileLocked(const ShortName& name /*= configFileName*/) const { qDebug() << "WARNING: fileLocked() is not implemented\n"; return false; }
 	virtual QString managerID() const = 0;		//костыль 
 public:
 	//====================== Public Methods ===========================
@@ -71,19 +74,21 @@ public:
 	virtual void init();	//нужна чтобы не ебаться с виртуальным конструктором
 	QAbstractManager::Status status() const;
 	void setActionWithChanged(QAbstractManager::ActionWithChanged action);
-	QStringList managedFiles() const;
+	QList<LongName> managedFiles() const;
+	QByteArray localMD5FileHash(const LongName& filename);
 	virtual ~QAbstractManager();
 	// ===================== Virtual Public Methods ===================
 	virtual void syncAll();
-	virtual void downloadAllNew();
-	virtual void uploadAllNew();
+	//virtual void downloadAllNew();
+	//virtual void uploadAllNew();
 	virtual void addFile(QFileInfo);
 	virtual void removeFile(QFileInfo);		//removes file from this cloud only
 	virtual void removeFileData(QFileInfo);		//removes file from all devices
 	//============ Pure Virtual Public Methods ========================
 	virtual qint64 spaceAvailable() const = 0;		//in bites
 	virtual QDateTime lastModified(const ShortName& name) const = 0;
-	
+	virtual QByteArray remoteMD5FileHash(const ShortName& filename) const = 0;
+
 
 
 	//=================== Prorected Qt Slots ==========================

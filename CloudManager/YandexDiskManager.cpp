@@ -1,4 +1,5 @@
 #include "YandexDiskManager.h"
+#include "FileClasses.h"
 
 
 YandexDiskManager::YandexDiskManager()
@@ -228,6 +229,22 @@ QDateTime YandexDiskManager::lastModified(const ShortName& name) const
 	QByteArray time = reply->rawHeader("Last-Modified");
 	if (time.isEmpty()) return QDateTime::fromTime_t(0);
 	return QDateTime::fromString(time, Qt::RFC2822Date);
+}
+
+QByteArray YandexDiskManager::remoteMD5FileHash(const ShortName& filename) const
+{
+	QNetworkRequest request("https://webdav.yandex.ru/" + filename);
+	request.setRawHeader("Authorization", authorizationHeader);
+	QNetworkReply *reply = disk.head(request);
+	netLog("HEAD", request, "EMPTY");
+	waitFor(reply);
+	checkForHTTPErrors(reply);
+	QByteArray hash = reply->rawHeader("Etag");
+#if DEBUG
+	return hash.toHex();
+#else
+	return hash;
+#endif
 }
 
 void YandexDiskManager::mkdir(QDir dir)
