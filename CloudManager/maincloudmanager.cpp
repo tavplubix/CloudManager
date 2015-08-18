@@ -1,6 +1,7 @@
 #include "maincloudmanager.h"
 #include "FileClasses.h"
 #include "CommonIncludes.h"
+#include "CustomRequestDialog.h"
 
 MainCloudManager::MainCloudManager(QWidget *parent)
 	: QMainWindow(parent)
@@ -17,9 +18,11 @@ MainCloudManager::MainCloudManager(QWidget *parent)
 		for (auto j : files)
 			if (j.isFile())
 				i->addFile(j);
+	connect(this, &QMainWindow::destroyed, qApp, &QApplication::quit);
 	connect(ui.refresh, &QPushButton::clicked, this, &MainCloudManager::refresh);
 	connect(ui.remove, &QPushButton::clicked, this, &MainCloudManager::remove);
 	connect(ui.sync, &QPushButton::clicked, this, &MainCloudManager::sync);
+	connect(ui.customRequestButton, &QPushButton::clicked, this, &MainCloudManager::customRequest);
 }
 
 MainCloudManager::~MainCloudManager()
@@ -30,18 +33,20 @@ MainCloudManager::~MainCloudManager()
 
 void MainCloudManager::refresh()
 {
-	QAbstractManager *i = stroages.first();
-	QList<LongName> files = i->managedFiles();
-	ui.table->setRowCount(files.size());
-	int row = 0;
-	for (auto j : files) {
-		QTableWidgetItem *name = new QTableWidgetItem(j);
-		QTableWidgetItem *ctime = new QTableWidgetItem(i->lastModified(j).toString());
-		QTableWidgetItem *ltime = new QTableWidgetItem(QFileInfo(j).lastModified().toString());
-		ui.table->setItem(row, 0, name);
-		ui.table->setItem(row, 1, ltime);
-		ui.table->setItem(row, 2, ctime);
-		row++;
+	//bstractManager *i = stroages.first();
+	for (auto i : stroages) {
+		QList<LongName> files = i->managedFiles();
+		ui.table->setRowCount(files.size());
+		int row = 0;
+		for (auto j : files) {
+			QTableWidgetItem *name = new QTableWidgetItem(j);
+			QTableWidgetItem *ctime = new QTableWidgetItem(i->lastModified(j).toString());
+			QTableWidgetItem *ltime = new QTableWidgetItem(QFileInfo(j).lastModified().toString());
+			ui.table->setItem(row, 0, name);
+			ui.table->setItem(row, 1, ltime);
+			ui.table->setItem(row, 2, ctime);
+			row++;
+		}
 	}
 }
 
@@ -59,5 +64,12 @@ void MainCloudManager::sync()
 		i->syncAll();
 	refresh();
 	//stroages.first()->uploadFile(QString("uploadtest.txt"));
+}
+
+void MainCloudManager::customRequest()
+{
+	auto dialog = CustomRequestDialog(stroages.first(), this);
+	dialog.show();
+	dialog.exec();
 }
 

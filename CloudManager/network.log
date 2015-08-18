@@ -1,0 +1,17 @@
+
+======================== REQUEST =========================
+  https://webdav.yandex.ru/123
+Authorization: OAuth ab418bd02faa4cd7a1529a193ad2322c
+BODY:
+
+==========================================================
+
+======================= RESPONSE =========================
+Status code: 400
+Server: MochiWeb/1.0
+Date: Tue, 18 Aug 2015 14:22:45 GMT
+Content-Length: 0
+Connection: close
+BODY:
+
+==========================================================

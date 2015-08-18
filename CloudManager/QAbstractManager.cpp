@@ -1,40 +1,47 @@
 #include "QAbstractManager.h"
-
 #include "FileClasses.h"
 #include "ConfigFile.h"
 
 
-void QAbstractManager::netLog(QNetworkReply *reply) const
+void QAbstractManager::netLog(QNetworkReply *reply, QIODevice* logDevice) const
 {
-#if NETLOG
+//#if NETLOG
 	//static QFile log("network.log");
 	//log.open(QIODevice::Append);
-	log.write("\n======================= RESPONSE =========================\n");
+	QIODevice* log;
+	if (logDevice) log = logDevice;
+	else if (NETLOG) log = &this->log;
+	else return;
+	log->write("\n======================= RESPONSE =========================\n");
 	int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-	log.write("Status code: " + QString::number(code).toLocal8Bit() + "\n");
+	log->write("Status code: " + QString::number(code).toLocal8Bit() + "\n");
 	QList<QByteArray> headers = reply->rawHeaderList();
-	for (auto i : headers) log.write(i + ": " + reply->rawHeader(i) + "\n");
-	log.write("BODY:\n");
-	log.write(reply->peek(reply->bytesAvailable() < 128 ? reply->bytesAvailable():128));
-	log.write("\n==========================================================\n");
-	log.flush();
-#endif
+	for (auto i : headers) log->write(i + ": " + reply->rawHeader(i) + "\n");
+	log->write("BODY:\n");
+	log->write(reply->peek(reply->bytesAvailable() < 1024 ? reply->bytesAvailable():1024));
+	log->write("\n==========================================================\n");
+	//log->flush();
+//#endif
 }
 
-void QAbstractManager::netLog(const QByteArray& type, const QNetworkRequest &request, const QByteArray &body) const
+void QAbstractManager::netLog(const QByteArray& type, const QNetworkRequest &request, const QByteArray &body, QIODevice* logDevice) const
 {
-#if NETLOG
+//#if NETLOG
 	//static QFile log("network.log");
 	//log.open(QIODevice::Append);
-	log.write("\n======================== REQUEST =========================\n");
-	log.write(type + "  " + request.url().toString().toLocal8Bit() + "\n");
+	QIODevice* log;
+	if (logDevice) log = logDevice;
+	else if (NETLOG) log = &this->log;
+	else return;
+	log->write("\n======================== REQUEST =========================\n");
+	log->write(type + "  " + request.url().toString().toLocal8Bit() + "\n");
 	QList<QByteArray> headers = request.rawHeaderList();
-	for (auto i : headers) log.write(i + ": " + request.rawHeader(i) + "\n");
-	log.write("BODY:\n");
-	log.write(body);
-	log.write("\n==========================================================\n");
-	log.flush();
-#endif
+	for (auto i : headers) log->write(i + ": " + request.rawHeader(i) + "\n");
+	log->write("BODY:\n");
+	log->write(body);
+	log->write("\n==========================================================\n");
+	//log->flush();
+//#endif
 }
 
 
@@ -46,43 +53,33 @@ void QAbstractManager::waitFor(ReplyID reply) const
 	}
 	/*static*/ QEventLoop loop;
 	/*static*/ QTimer timer;
-	//connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
 	connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
 	timer.start(10);
 	while (!replyFinished(reply))
 	{
 		loop.exec();
 	}
-	//if (reply->isFinished()) return;
-	//else loop.exec();
 }
 
-void QAbstractManager::registerReply(ReplyID reply) const
+void QAbstractManager::registerReply(ReplyID reply) const		//FIXME race condition
 {
 	replies.insert(reply);
 }
 
-void QAbstractManager::setReplyFinished(ReplyID reply) const
+void QAbstractManager::setReplyFinished(ReplyID reply) const	//FIXME race condition
 {
+	if (!replies.contains(reply)) {
+		qDebug() << "ERROR: Race condition detected in setReplyFinished(): Deadlock is possible in waitFor()\n";
+		QThread::msleep(42);
+	}
 	replies.remove(reply);
 }
 
 bool QAbstractManager::replyFinished(ReplyID reply) const
 {
-	return !replies.contains(reply);
+	if (!replies.contains(reply)) return true;
+	else return reply->isFinished();
 }
-
-//void QAbstractManager::pushChangedFiles()	//WARNING добавить проверку на ошибки
-//{
-//	for (auto i : changedFiles)
-//		uploadFile(i, new QFile(i));
-//}
-//
-//void QAbstractManager::pullChangedFiles()	//WARNING добавить проверку на ошибки
-//{
-//	for (auto i : changedFiles)
-//		downloadFile(i, new QFile(i));
-//}
 
 
 
@@ -161,36 +158,6 @@ void QAbstractManager::syncAll()		//FIXME
 	}
 
 }
-//
-//void QAbstractManager::downloadAllNew()		//WARNING добавить проверку на ошибки
-//{
-//	for (auto i : newCloudFiles) {
-//		downloadFile(i, new QFile(i));
-//		localFiles.push_back(i);
-//	}
-//	newCloudFiles.clear();		//WARNING нельзя очищать список, если не уверены в том, что все файлы скачались
-//}
-//
-//void QAbstractManager::uploadAllNew()	//WARNING добавить проверку на ошибки
-//{
-//	QString configFileName = rootDir.absoluteFilePath(".cloudmanager" + managerID());
-//	QFile configFile(rootDir.absoluteFilePath(configFileName));
-//	configFile.open(QIODevice::ReadWrite);
-//	QJsonObject config = QJsonDocument::fromJson(configFile.readAll()).object();
-//	QJsonArray files = config.value("managedFiles").toArray();
-//	for (auto i : newLocalFiles) {
-//		uploadFile(i,  new QFile(i));
-//		cloudFiles.push_back(i);
-//
-//		files.push_back(i);
-//		config.insert("managedFiles", files);
-//	}
-//	configFile.resize(0);
-//	configFile.write(QJsonDocument(config).toJson());
-//	configFile.close();
-//	uploadFile(configFileName, new QFile(configFileName));
-//	newCloudFiles.clear();		//WARNING нельзя очищать список, если не уверены в том, что все файлы загрузились
-//}
 
 void QAbstractManager::addFile(QFileInfo file)		//FIXME will not work in offline mode	//TODO throw exception in offline mode
 {

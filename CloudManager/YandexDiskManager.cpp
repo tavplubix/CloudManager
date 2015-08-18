@@ -109,10 +109,11 @@ qint64 YandexDiskManager::spaceAvailable()	const	//FIXME spaceAvailable()
 	QByteArray body = "<propfind xmlns=\"DAV:\"> <prop> <quota-available-bytes/> <quota-used-bytes/> </prop> </propfind>";
 	QBuffer *buf = new QBuffer;
 	buf->setData(body);
+	buf->open(QIODevice::ReadOnly);
 	QNetworkReply *reply = disk.sendCustomRequest(request, "PROPFIND", buf);		//WARNING
+	registerReply(reply);
 	netLog("PROPFIND", request, body);
 	buf->setParent(reply);
-	registerReply(reply);
 	connect(reply, &QNetworkReply::finished, this, [&](){ setReplyFinished(reply); });		//CRUTCH
 	waitFor(reply);
 
@@ -202,9 +203,12 @@ ReplyID YandexDiskManager::downloadFile(const ShortName& name, QSharedPointer<QI
 ReplyID YandexDiskManager::uploadFile(const ShortName& name, QIODevice* file)
 {
 	//WARNING может не работать для файлов не в корне
+
+
+
+
 	QNetworkRequest request("https://webdav.yandex.ru/" + name);
 	request.setRawHeader("Authorization", authorizationHeader);
-	//QFile *f = //new QFile(name/*file.absoluteFilePath()*/);
 	file->open(QIODevice::ReadOnly);
 	QCryptographicHash md5HashCalculator(QCryptographicHash::Algorithm::Md5);
 	md5HashCalculator.addData(file);
@@ -216,21 +220,14 @@ ReplyID YandexDiskManager::uploadFile(const ShortName& name, QIODevice* file)
 	file->reset();
 	QNetworkReply *reply = disk.put(request, file);
 	registerReply(reply);
-		//f.open(QIODevice::ReadOnly);
-		//QByteArray tmp = f.readAll();
-		//QNetworkReply *reply = disk.put(request, tmp);
 	file->setParent(reply);		//WARNING
-	netLog("PUT", request, "FILE");	//DEBUG
+	netLog("PUT", request, "FILE");	
 	connect(reply, &QNetworkReply::finished, this, [=](){
 		checkForHTTPErrors(reply);
 		int statusCode = HTTPstatus(reply);
 		if (statusCode == 100) return;
-		if (statusCode == 201) {
-			reply->abort();
-			reply->deleteLater();	//WARNING утечка памяти в случае ошибки (не 201 и не 100)
-			emit done();
-			return;
-		}
+		if (statusCode == 201) reply->abort();
+		reply->deleteLater();	
 	}); 
 	return reply;
 }
@@ -240,8 +237,8 @@ QDateTime YandexDiskManager::lastModified(const ShortName& name) const
 	QNetworkRequest request("https://webdav.yandex.ru/" + name);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.head(request);
-	netLog("HEAD", request, "EMPTY");
 	registerReply(reply);
+	netLog("HEAD", request, "EMPTY");
 	connect(reply, &QNetworkReply::finished, this, [&](){ setReplyFinished(reply); });		//CRUTCH
 	waitFor(reply);
 	checkForHTTPErrors(reply);
@@ -255,8 +252,8 @@ QByteArray YandexDiskManager::remoteMD5FileHash(const ShortName& filename) const
 	QNetworkRequest request("https://webdav.yandex.ru/" + filename);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.head(request);
-	netLog("HEAD", request, "EMPTY");
 	registerReply(reply);
+	netLog("HEAD", request, "EMPTY");
 	connect(reply, &QNetworkReply::finished, this, [&](){ setReplyFinished(reply); });		//CRUTCH
 	waitFor(reply);
 	checkForHTTPErrors(reply);
@@ -266,6 +263,33 @@ QByteArray YandexDiskManager::remoteMD5FileHash(const ShortName& filename) const
 #else
 	return QByteArray::fromHex(hash);
 #endif
+}
+
+QByteArray YandexDiskManager::sendDebugRequest(QByteArray requestType, QString url, QByteArray body /*= QByteArray()*/, QList<QNetworkReply::RawHeaderPair> additionalHeaders /*= QList<QNetworkReply::RawHeaderPair>()*/)
+{
+	QNetworkRequest request(url); 
+	for (auto &header : additionalHeaders)
+		request.setRawHeader(header.first, header.second);
+	if (!request.hasRawHeader("Authorization"))
+		request.setRawHeader("Authorization", authorizationHeader);
+	
+	QBuffer *buf = new QBuffer;
+	buf->setData(body);
+	buf->open(QIODevice::ReadOnly);
+	QNetworkReply *reply = disk.sendCustomRequest(request, requestType, buf);		//WARNING
+	connect(reply, &QNetworkReply::finished, this, [&](){		//FIXME race condition?
+		setReplyFinished(reply);
+	});		//CRUTCH
+	registerReply(reply);
+	QBuffer logBuf;
+	logBuf.open(QIODevice::Append);
+	netLog(requestType, request, body, &logBuf);
+	buf->setParent(reply);
+	waitFor(reply);
+
+	netLog(reply, &logBuf);
+	delete reply;
+	return logBuf.data();
 }
 
 void YandexDiskManager::mkdir(ShortName dir)
