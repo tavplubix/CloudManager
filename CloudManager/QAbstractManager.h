@@ -20,10 +20,12 @@
 
 //EXCEPTIONS
 class FatalError : QException {};
+class NotAuthorized : QException {};	//TODO throw this exception if HTTP status code is 401 or 403 
 class ShortName;
 class LongName;
 class ConfigFile;
 
+typedef const QNetworkReply* ReplyID;
 
 
 class QAbstractManager 
@@ -37,6 +39,7 @@ public:
 private:
 	//===================== Private Fields ============================
 	QSet<ShortName> local, remote;
+	mutable QSet<ReplyID> replies;
 	//QStringList localFiles, cloudFiles;			//FIXME вмето этой поебени использовать два конфиг-файла: локальный и удалённый; мержить их при синхронизации, заливать результат в облако
 	//QStringList changedFiles, newLocalFiles, newCloudFiles;
 	QAbstractManager::ActionWithChanged action;
@@ -44,7 +47,7 @@ private:
 	ConfigFile *config;
 	//===================== Private Methods ===========================
 	//void compareFiles(); 
-	const QNetworkReply* downloadFile(const ShortName& name, QIODevice* file) { QSharedPointer<QIODevice> tmp(file);  return downloadFile(name, tmp); }
+	ReplyID downloadFile(const ShortName& name, QIODevice* file) { QSharedPointer<QIODevice> tmp(file);  return downloadFile(name, tmp); }
 	//virtual void pushChangedFiles();
 	//virtual void pullChangedFiles();
 	//void updateConfig();
@@ -55,17 +58,20 @@ protected:
 	//===================== Protected Methods =========================
 	void netLog(QNetworkReply *reply) const;
 	void netLog(const QByteArray& type, const QNetworkRequest &request, const QByteArray &body) const;
-	void waitFor(const QNetworkReply* reply) const;
+	void waitFor(ReplyID reply) const;
+	void registerReply(ReplyID reply) const;
+	void setReplyFinished(ReplyID reply) const;
+	bool replyFinished(ReplyID reply) const;
 	//============== Pure Virtual Prorected Methods ===================
 	//public://dbg
 	virtual bool authorized() const = 0;
-	virtual const QNetworkReply* authorize() = 0;
-	virtual const QNetworkReply* downloadFile(const ShortName& name, QSharedPointer<QIODevice> file) = 0;
-	virtual const QNetworkReply* uploadFile(const ShortName& name, QIODevice* file) = 0;		//становится влдельцем file
-	virtual const QNetworkReply* remove(const ShortName& name) = 0;
+	virtual ReplyID authorize() = 0;
+	virtual ReplyID downloadFile(const ShortName& name, QSharedPointer<QIODevice> file) = 0;
+	virtual ReplyID uploadFile(const ShortName& name, QIODevice* file) = 0;		//становится влдельцем file
+	virtual ReplyID remove(const ShortName& name) = 0;
 	//блокировать один файл или весть сервис целиком? (блокировка файла конфигурации == блокировка сервиса)
-	virtual const QNetworkReply* lockFile(const ShortName& name /*= configFileName*/) { qDebug() << "WARNING: lockFile() is not implemented\n"; return nullptr; }
-	virtual const QNetworkReply* unlockFile(const ShortName& name /*= configFileName*/) { qDebug() << "WARNING: unlockFile() is not implemented\n"; return nullptr; }
+	virtual ReplyID lockFile(const ShortName& name /*= configFileName*/) { qDebug() << "WARNING: lockFile() is not implemented\n"; return nullptr; }
+	virtual ReplyID unlockFile(const ShortName& name /*= configFileName*/) { qDebug() << "WARNING: unlockFile() is not implemented\n"; return nullptr; }
 	virtual bool fileLocked(const ShortName& name /*= configFileName*/) const { qDebug() << "WARNING: fileLocked() is not implemented\n"; return false; }
 	virtual QString managerID() const = 0;		//костыль 
 public:

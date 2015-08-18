@@ -38,16 +38,38 @@ void QAbstractManager::netLog(const QByteArray& type, const QNetworkRequest &req
 }
 
 
-void QAbstractManager::waitFor(const QNetworkReply* reply) const
+void QAbstractManager::waitFor(ReplyID reply) const
 {
 	if (reply == nullptr) {
 		qDebug() << "WARNING: reply == nullptr";
 		return;
 	}
 	/*static*/ QEventLoop loop;
-	connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-	if (reply->isFinished()) return;
-	else loop.exec();
+	/*static*/ QTimer timer;
+	//connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+	connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+	timer.start(10);
+	while (!replyFinished(reply))
+	{
+		loop.exec();
+	}
+	//if (reply->isFinished()) return;
+	//else loop.exec();
+}
+
+void QAbstractManager::registerReply(ReplyID reply) const
+{
+	replies.insert(reply);
+}
+
+void QAbstractManager::setReplyFinished(ReplyID reply) const
+{
+	replies.remove(reply);
+}
+
+bool QAbstractManager::replyFinished(ReplyID reply) const
+{
+	return !replies.contains(reply);
 }
 
 //void QAbstractManager::pushChangedFiles()	//WARNING добавить проверку на ошибки
@@ -170,14 +192,14 @@ void QAbstractManager::syncAll()		//FIXME
 //	newCloudFiles.clear();		//WARNING нельзя очищать список, если не уверены в том, что все файлы загрузились
 //}
 
-void QAbstractManager::addFile(QFileInfo file)		//FIXME will not work in offline mode
+void QAbstractManager::addFile(QFileInfo file)		//FIXME will not work in offline mode	//TODO throw exception in offline mode
 {
 	LongName name = file.absoluteFilePath();
 	config->addFile(name);
 	uploadFile(name, new QFile(name));
 }
 
-void QAbstractManager::removeFile(QFileInfo file)	//FIXME will not work in offline mode
+void QAbstractManager::removeFile(QFileInfo file)	//FIXME will not work in offline mode    //TODO throw exception in offline mode
 {
 	LongName name = file.absoluteFilePath();
 	config->removeFile(name);

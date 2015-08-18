@@ -28,8 +28,9 @@ YandexDiskManager::~YandexDiskManager()
 }
 
 
-const QNetworkReply* YandexDiskManager::authorize()
+ReplyID YandexDiskManager::authorize()
 {
+	if (authorized()) return nullptr;
 	if (authtype == AuthType::Basic) {
 		qDebug() << "Basic authorization isn't implemented\n";
 		authtype = AuthType::OAuth;
@@ -59,6 +60,7 @@ const QNetworkReply* YandexDiskManager::authorize()
 		//requestBody += "&device_id=" + deviceID;
 		//requestBody += "&device_name=" + deviceName;
 		QNetworkReply *reply = oauth->post(QNetworkRequest(QUrl("https://oauth.yandex.ru/token")), QByteArray(requestBody));
+		registerReply(reply);
 		netLog("POST", QNetworkRequest(QUrl("https://oauth.yandex.ru/token")), requestBody);	//DEBUG
 		//connect(reply, &QNetworkReply::finished, this, &YandexDiskManager::tokenGot);
 		connect(reply, &QNetworkReply::finished, this, [=]() {
@@ -78,10 +80,11 @@ const QNetworkReply* YandexDiskManager::authorize()
 				delete oauth;
 				oauth = nullptr;
 				m_status = Status::Ready;
-				emit done();
+				//emit done();
 			}
 			else {
-				QTimer::singleShot(1000, this, &YandexDiskManager::authorize);
+				//QTimer::singleShot(1000, this, &YandexDiskManager::authorize);
+				throw NotAuthorized();
 			}
 		} );
 		return reply;
@@ -109,9 +112,12 @@ qint64 YandexDiskManager::spaceAvailable()	const	//FIXME spaceAvailable()
 	QNetworkReply *reply = disk.sendCustomRequest(request, "PROPFIND", buf);		//WARNING
 	netLog("PROPFIND", request, body);
 	buf->setParent(reply);
+	registerReply(reply);
+	connect(reply, &QNetworkReply::finished, this, [&](){ setReplyFinished(reply); });		//CRUTCH
 	waitFor(reply);
 
 	checkForHTTPErrors(reply);
+	if (HTTPstatus(reply) == 401) throw NotAuthorized();
 	QByteArray response = reply->readAll();
 	response.toLower();
 	int begin = response.indexOf("<d:quota-available-bytes>");
@@ -137,6 +143,7 @@ void YandexDiskManager::setAuthType(AuthType type)
 bool YandexDiskManager::_checkForHTTPErrors(QNetworkReply *reply, const char* file, const int line, const char* func) const
 {
 	netLog(reply);  //debug
+	setReplyFinished(reply);		//TODO убрать этот костыль
 	int code = HTTPstatus(reply);
 	int codeType = (code / 100) * 100;
 	if (codeType == 400 || codeType == 500) {
@@ -149,16 +156,25 @@ bool YandexDiskManager::_checkForHTTPErrors(QNetworkReply *reply, const char* fi
 
 bool YandexDiskManager::authorized() const
 {
-	return !authorizationHeader.isEmpty();		//TODO check token lifetime
+	if (authorizationHeader.isEmpty()) return false;		
+	//if (validUntil - time(nullptr) < 600) return false;
+	try {
+		spaceAvailable();	//throws if not authorized
+		return true;
+	}
+	catch (NotAuthorized) {
+		return false;
+	}
 }
 
 
 
-const QNetworkReply* YandexDiskManager::downloadFile(const ShortName& name, QSharedPointer<QIODevice> file)
+ReplyID YandexDiskManager::downloadFile(const ShortName& name, QSharedPointer<QIODevice> file)
 {
 	QNetworkRequest request("https://webdav.yandex.ru/" + name);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.get(request);
+	registerReply(reply);
 	netLog("GET", request, "EMPTY");	//DEBUG
 	//connect(reply, &QNetworkReply::finished, this, &YandexDiskManager::fileDownloaded);		//хуйня, лямды лучше
 	connect(reply, &QNetworkReply::finished, this, [=](){ 
@@ -183,7 +199,7 @@ const QNetworkReply* YandexDiskManager::downloadFile(const ShortName& name, QSha
 }
 
 
-const QNetworkReply* YandexDiskManager::uploadFile(const ShortName& name, QIODevice* file)
+ReplyID YandexDiskManager::uploadFile(const ShortName& name, QIODevice* file)
 {
 	//WARNING может не работать для файлов не в корне
 	QNetworkRequest request("https://webdav.yandex.ru/" + name);
@@ -199,6 +215,7 @@ const QNetworkReply* YandexDiskManager::uploadFile(const ShortName& name, QIODev
 	request.setRawHeader("Sha256", sha256HashCalculator.result().toHex());
 	file->reset();
 	QNetworkReply *reply = disk.put(request, file);
+	registerReply(reply);
 		//f.open(QIODevice::ReadOnly);
 		//QByteArray tmp = f.readAll();
 		//QNetworkReply *reply = disk.put(request, tmp);
@@ -224,6 +241,8 @@ QDateTime YandexDiskManager::lastModified(const ShortName& name) const
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.head(request);
 	netLog("HEAD", request, "EMPTY");
+	registerReply(reply);
+	connect(reply, &QNetworkReply::finished, this, [&](){ setReplyFinished(reply); });		//CRUTCH
 	waitFor(reply);
 	checkForHTTPErrors(reply);
 	QByteArray time = reply->rawHeader("Last-Modified");
@@ -237,24 +256,24 @@ QByteArray YandexDiskManager::remoteMD5FileHash(const ShortName& filename) const
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.head(request);
 	netLog("HEAD", request, "EMPTY");
+	registerReply(reply);
+	connect(reply, &QNetworkReply::finished, this, [&](){ setReplyFinished(reply); });		//CRUTCH
 	waitFor(reply);
 	checkForHTTPErrors(reply);
 	QByteArray hash = reply->rawHeader("Etag");
 #if DEBUG
-	return hash.toHex();
-#else
 	return hash;
+#else
+	return QByteArray::fromHex(hash);
 #endif
 }
 
-void YandexDiskManager::mkdir(QDir dir)
+void YandexDiskManager::mkdir(ShortName dir)
 {
-	QString relative;
-	if(dir.isAbsolute()) relative = rootDir.relativeFilePath(dir.absolutePath());		//WARNING не работает для дирректорий не в корне
-	else relative = dir.path();
-	QNetworkRequest request("https://webdav.yandex.ru/" + relative);
+	QNetworkRequest request("https://webdav.yandex.ru/" + dir/*relative*/);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.sendCustomRequest(request, "MKCOL");
+	registerReply(reply);
 	netLog("MKCOL", request, "EMPTY");	//DEBUG
 	connect(reply, &QNetworkReply::finished, this, [=](){
 		checkForHTTPErrors(reply);
@@ -263,11 +282,12 @@ void YandexDiskManager::mkdir(QDir dir)
 	});
 }
 
-const QNetworkReply* YandexDiskManager::remove(const ShortName& name)
+ReplyID YandexDiskManager::remove(const ShortName& name)
 {
 	QNetworkRequest request("https://webdav.yandex.ru/" + name);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.sendCustomRequest(request, "DELETE");
+	registerReply(reply);
 	netLog("DELETE", request, "EMPTY");	//DEBUG
 	connect(reply, &QNetworkReply::finished, this, [=](){
 		checkForHTTPErrors(reply);

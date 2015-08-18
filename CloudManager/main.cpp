@@ -1,5 +1,5 @@
 #include "maincloudmanager.h"
-#include "CommonIncludes.h"
+//#include "CommonIncludes.h"
 #include <QtWidgets/QApplication>
 
 int main(int argc, char *argv[])

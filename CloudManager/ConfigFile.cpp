@@ -54,7 +54,7 @@ void ConfigFile::update()
 //}
 
 ConfigFile::ConfigFile(QAbstractManager* manager)
-	: manager(manager)
+	: manager(manager), m_locked(false)
 {
 	update();
 }
@@ -78,6 +78,7 @@ void ConfigFile::unlock()
 	if (!m_locked) return;
 	//saveChanges();
 	manager->waitFor( manager->unlockFile(configFileName) );
+	m_locked = false;
 }
 
 bool ConfigFile::locked() const

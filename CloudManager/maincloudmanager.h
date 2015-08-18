@@ -3,7 +3,7 @@
 
 #include <QtWidgets/QMainWindow>
 #include "ui_maincloudmanager.h"
-#include "CommonIncludes.h"
+//#include "CommonIncludes.h"
 #include "YandexDiskManager.h"
 #include <QFileDialog>
 
