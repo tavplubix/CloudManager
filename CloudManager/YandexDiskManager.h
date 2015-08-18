@@ -27,7 +27,7 @@ protected:
 	//======================== Virtual Protected Methods =========================
 	bool authorized() const override final;
 	ReplyID authorize() override final;
-	QString managerID() const override { return "42"; };
+	//QString managerID() const override { return "42"; };
 	qint64 spaceAvailable() const override final;
 	ReplyID downloadFile(const ShortName& name, QSharedPointer<QIODevice> file) override final;
 	ReplyID uploadFile(const ShortName& name, QIODevice* file) override final;
@@ -42,6 +42,11 @@ public:
 
 	QDateTime lastModified(const ShortName& name) const override final;
 	QByteArray remoteMD5FileHash(const ShortName& filename) const override final;
+
+#if DEBUG
+	QByteArray sendDebugRequest(QByteArray requestType, QString url, QByteArray body = QByteArray(),
+		QList<QNetworkReply::RawHeaderPair> additionalHeaders = QList<QNetworkReply::RawHeaderPair>()) override final;
+#endif
 
 	//=========================== Private Qt Slots ===============================
 private slots:

@@ -22,7 +22,7 @@
 #include <QMessageLogger>
 #include <QBuffer>
 #include <QSettings>
-//#include <QThread>
+#include <QThread>
 //#include <QDomDocument>
 //#include <QtConcurrent>
 #include <QDateTime>

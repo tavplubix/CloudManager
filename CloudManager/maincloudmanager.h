@@ -1,5 +1,5 @@
-#ifndef MAINCLOUDMANAGER_H
-#define MAINCLOUDMANAGER_H
+#pragma once
+
 
 #include <QtWidgets/QMainWindow>
 #include "ui_maincloudmanager.h"
@@ -23,6 +23,7 @@ private slots:
 	void refresh();
 	void remove();
 	void sync();
+	void customRequest();
 };
 
-#endif // MAINCLOUDMANAGER_H
+
