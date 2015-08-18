@@ -26,15 +26,13 @@ private:
 protected:
 	//======================== Virtual Protected Methods =========================
 	bool authorized() const override final;
-	const QNetworkReply* authorize() override final;
+	ReplyID authorize() override final;
 	QString managerID() const override { return "42"; };
 	qint64 spaceAvailable() const override final;
-	const QNetworkReply* downloadFile(const ShortName& name, QSharedPointer<QIODevice> file) override final;
-	const QNetworkReply* uploadFile(const ShortName& name, QIODevice* file) override final;
-	const QNetworkReply* remove(const ShortName& name) override final;
-	virtual void mkdir(QDir dir);
-
-
+	ReplyID downloadFile(const ShortName& name, QSharedPointer<QIODevice> file) override final;
+	ReplyID uploadFile(const ShortName& name, QIODevice* file) override final;
+	ReplyID remove(const ShortName& name) override final;
+	virtual void mkdir(ShortName dir);
 public:
 	//=========================== Public Methods =================================
 	YandexDiskManager();

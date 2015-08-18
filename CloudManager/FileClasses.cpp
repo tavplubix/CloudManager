@@ -5,20 +5,22 @@
 
 ShortName::ShortName(const QString& s)
 {
+	QDir rootDir = "F:/Backups/CloudManager/";	//Hardcoded temporary
 	//TODO обрабатывать файлы не в rootDir
 	QFileInfo file(s);
 	if (file.isRelative()) {
-		file = rootDir.absoluteFilePath(s);
+		auto tmp = rootDir.absolutePath();
+		file = rootDir.absoluteFilePath(s);		//FIXME segfault - init rootDir before using
 		if (!file.exists())
 			//throw FileDoesNotExist();
-			qDebug() << "WARNING: File does not exist\n";
+			qDebug() << "WARNING: File " + s + " does not exist\n";
 		if (file.isDir()) throw ItsDir();
 		else shortName = s;
 	}
 	else {
 		if (!file.exists())
 			//throw FileDoesNotExist();
-			qDebug() << "WARNING: File does not exist\n";
+			qDebug() << "WARNING: File " + s + " does not exist\n";
 		if (file.isDir()) throw ItsDir();
 		QString rel = rootDir.relativeFilePath(s);
 		if (rel.contains("..") || rel.isEmpty()) throw NotImplemented();		
@@ -31,11 +33,12 @@ ShortName::ShortName(const LongName& ln)
 
 LongName::LongName(const QString& s)
 {
+	QDir rootDir = "F:/Backups/CloudManager/";	//Hardcoded temporary
 	QFileInfo file(s);
 	if (file.isAbsolute()) {
 		if (!file.exists())
 			//throw FileDoesNotExist();
-			qDebug() << "WARNING: File does not exist\n";
+			qDebug() << "WARNING: File " + s + " does not exist\n";
 		if (!file.absoluteFilePath().contains(rootDir.absolutePath())) throw NotImplemented();
 		if (file.isDir()) throw ItsDir();
 		else longName = s;
@@ -44,7 +47,7 @@ LongName::LongName(const QString& s)
 		file = rootDir.absoluteFilePath(s);
 		if (!file.exists())
 			//throw FileDoesNotExist();
-			qDebug() << "WARNING: File does not exist\n";
+			qDebug() << "WARNING: File " + s + " does not exist\n";
 		if (file.isDir()) throw ItsDir();
 		else longName = file.absoluteFilePath();
 	}

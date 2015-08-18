@@ -10,7 +10,6 @@ class FileID;
 typedef QSet<ShortName> ShortNameSet;
 typedef QSet<LongName> LongNameSet;
 
-const QDir rootDir = "F:/Backups/CloudManager/";	//Hardcoded temporary
 
 class FileDoesNotExist : public QException {};
 class NotImplemented : public QException {};

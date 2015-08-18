@@ -1,5 +1,6 @@
 #include "maincloudmanager.h"
 #include "FileClasses.h"
+#include "CommonIncludes.h"
 
 MainCloudManager::MainCloudManager(QWidget *parent)
 	: QMainWindow(parent)
