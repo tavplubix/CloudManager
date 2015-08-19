@@ -54,10 +54,10 @@ void QAbstractManager::waitFor(ReplyID reply) const
 	/*static*/ QEventLoop loop;
 	/*static*/ QTimer timer;
 	connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-	timer.start(10);
+	timer.start(50);
 	while (!replyFinished(reply))
 	{
-		loop.exec();
+		loop.exec(QEventLoop::ExcludeUserInputEvents);
 	}
 }
 

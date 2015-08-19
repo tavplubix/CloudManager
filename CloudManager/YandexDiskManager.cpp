@@ -276,10 +276,15 @@ QByteArray YandexDiskManager::sendDebugRequest(QByteArray requestType, QString u
 	QBuffer *buf = new QBuffer;
 	buf->setData(body);
 	buf->open(QIODevice::ReadOnly);
-	QNetworkReply *reply = disk.sendCustomRequest(request, requestType, buf);		//WARNING
+	QNetworkReply* reply;
+	if (requestType == "HEAD") reply = disk.head(request);	//CRUTCH makes it works
+	/*QNetworkReply **/else reply = disk.sendCustomRequest(request, requestType, buf);		//WARNING
 	connect(reply, &QNetworkReply::finished, this, [&](){		//FIXME race condition?
 		setReplyFinished(reply);
 	});		//CRUTCH
+	//connect(reply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [&](QNetworkReply::NetworkError){		
+	//	setReplyFinished(reply);
+	//});		//CRUTCH
 	registerReply(reply);
 	QBuffer logBuf;
 	logBuf.open(QIODevice::Append);
@@ -310,7 +315,8 @@ ReplyID YandexDiskManager::remove(const ShortName& name)
 {
 	QNetworkRequest request("https://webdav.yandex.ru/" + name);
 	request.setRawHeader("Authorization", authorizationHeader);
-	QNetworkReply *reply = disk.sendCustomRequest(request, "DELETE");
+	//QNetworkReply *reply = disk.sendCustomRequest(request, "DELETE");
+	QNetworkReply *reply = disk.deleteResource(request);
 	registerReply(reply);
 	netLog("DELETE", request, "EMPTY");	//DEBUG
 	connect(reply, &QNetworkReply::finished, this, [=](){
