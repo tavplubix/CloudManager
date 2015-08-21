@@ -21,6 +21,8 @@
 //EXCEPTIONS
 class FatalError : QException {};
 class NotAuthorized : QException {};	//TODO throw this exception if HTTP status code is 401 or 403 
+class Error : QException {};
+class InvalidPath : QException {};
 class ShortName;
 class LongName;
 class ConfigFile;
@@ -36,9 +38,10 @@ public:
 	enum class Status { Init, WaitingForSettings, Authorization, Syncronizing, Ready, Failed };
 	enum class ActionWithChanged { Push, Pull, SaveNewest, Nothing, Other };
 	friend class ConfigFile;
+	friend class CustomRequestDialog;	//for testing
 private:
 	//===================== Private Fields ============================
-	mutable QSet<ReplyID> replies;
+//	mutable QSet<ReplyID> replies;
 	QAbstractManager::ActionWithChanged action;
 	mutable QFile log;
 	ConfigFile *config;
@@ -51,10 +54,14 @@ protected:
 	//===================== Protected Methods =========================
 	void netLog(QNetworkReply *reply, QIODevice* logDevice = nullptr) const;
 	void netLog(const QByteArray& type, const QNetworkRequest &request, const QByteArray &body, QIODevice* logDevice = nullptr) const;
-	void registerReply(ReplyID reply) const;
-	void waitFor(ReplyID reply) const;
-	void setReplyFinished(ReplyID reply) const;
-	bool replyFinished(ReplyID reply) const;
+//	void registerReply(ReplyID reply) const;
+	void waitFor(ReplyID reply) const;		//waits for the QNetworkReply::destroyed signal (it means that processing of a reply is complete)
+	void waitForFinishedSignal(QNetworkReply* reply) const;
+//protected slots:
+//	void setReplyFinished(ReplyID reply) const;
+//protected:
+//	bool replyFinished(ReplyID reply) const;
+//	QSet<ReplyID> allReplies() const { return replies; }
 	//============== Pure Virtual Prorected Methods ===================
 	virtual bool authorized() const = 0;
 	virtual ReplyID authorize() = 0;

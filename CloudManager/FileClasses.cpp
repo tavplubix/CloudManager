@@ -14,14 +14,14 @@ ShortName::ShortName(const QString& s)
 		if (!file.exists())
 			//throw FileDoesNotExist();
 			qDebug() << "WARNING: File " + s + " does not exist\n";
-		if (file.isDir()) throw ItsDir();
-		else shortName = s;
+		//if (file.isDir()) throw ItsNotFile();
+		shortName = s;
 	}
 	else {
 		if (!file.exists())
 			//throw FileDoesNotExist();
 			qDebug() << "WARNING: File " + s + " does not exist\n";
-		if (file.isDir()) throw ItsDir();
+		//if (file.isDir()) throw ItsNotFile();
 		QString rel = rootDir.relativeFilePath(s);
 		if (rel.contains("..") || rel.isEmpty()) throw NotImplemented();		
 		else shortName = rel;
@@ -40,7 +40,7 @@ LongName::LongName(const QString& s)
 			//throw FileDoesNotExist();
 			qDebug() << "WARNING: File " + s + " does not exist\n";
 		if (!file.absoluteFilePath().contains(rootDir.absolutePath())) throw NotImplemented();
-		if (file.isDir()) throw ItsDir();
+		//if (file.isDir()) throw ItsNotFile();
 		else longName = s;
 	}
 	else {
@@ -48,8 +48,8 @@ LongName::LongName(const QString& s)
 		if (!file.exists())
 			//throw FileDoesNotExist();
 			qDebug() << "WARNING: File " + s + " does not exist\n";
-		if (file.isDir()) throw ItsDir();
-		else longName = file.absoluteFilePath();
+		//if (file.isDir()) throw ItsNotFile();
+		longName = file.absoluteFilePath();
 	}
 
 }

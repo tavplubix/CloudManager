@@ -1,5 +1,8 @@
 #pragma once
 #include <QObject>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 #include "CommonIncludes.h"
 #include "FileClasses.h"
 

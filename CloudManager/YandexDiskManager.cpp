@@ -11,10 +11,9 @@ YandexDiskManager::YandexDiskManager()
 		authtype = static_cast<AuthType>( settings->value("aythtype", static_cast<int>(AuthType::OAuth)).toInt() );		// I really love static typing
 		authorizationHeader = settings->value("authorization").value<QByteArray>();	//TODO шифровать токен
 	settings->endGroup();
+	//connect(&disk, &QNetworkAccessManager::finished, this, &QAbstractManager::setReplyFinished);	//FIXME сигнал посылается, когда получен ответ сервера, но это не значит, что закончилась обработка ответа
 	//есть смысл делать всё асинхронно
 	disk.connectToHostEncrypted("https://webdav.yandex.ru/");
-	//QSettings
-	//if (!authorized()) QTimer::singleShot(0, this, &YandexDiskManager::authorize);
 }
 
 YandexDiskManager::~YandexDiskManager()
@@ -28,7 +27,7 @@ YandexDiskManager::~YandexDiskManager()
 }
 
 
-ReplyID YandexDiskManager::authorize()
+ReplyID YandexDiskManager::authorize()		//TODO use QAuthorizer
 {
 	if (authorized()) return nullptr;
 	if (authtype == AuthType::Basic) {
@@ -50,9 +49,12 @@ ReplyID YandexDiskManager::authorize()
 		}
 
 		//Запрос токена
-		if (oauth == nullptr) oauth = new QNetworkAccessManager(this);
+		if (oauth == nullptr) {
+			oauth = new QNetworkAccessManager(this);
+			//connect(oauth, &QNetworkAccessManager::finished, this, &QAbstractManager::setReplyFinished);
+		}
 		QUrl authServer = authURL;
-		oauth->connectToHostEncrypted("https://oauth.yandex.ru");	//WARNING 
+		oauth->connectToHostEncrypted("https://oauth.yandex.ru");	//WARNING add SSL errors handler
 		QByteArray requestBody = "grant_type=authorization_code";
 		requestBody += "&code=" + QString::number(verificationCode);
 		requestBody += "&client_id=" + appID;
@@ -60,7 +62,7 @@ ReplyID YandexDiskManager::authorize()
 		//requestBody += "&device_id=" + deviceID;
 		//requestBody += "&device_name=" + deviceName;
 		QNetworkReply *reply = oauth->post(QNetworkRequest(QUrl("https://oauth.yandex.ru/token")), QByteArray(requestBody));
-		registerReply(reply);
+//		registerReply(reply);
 		netLog("POST", QNetworkRequest(QUrl("https://oauth.yandex.ru/token")), requestBody);	//DEBUG
 		//connect(reply, &QNetworkReply::finished, this, &YandexDiskManager::tokenGot);
 		connect(reply, &QNetworkReply::finished, this, [=]() {
@@ -94,7 +96,7 @@ ReplyID YandexDiskManager::authorize()
 
 
 
-qint64 YandexDiskManager::spaceAvailable()	const	//FIXME spaceAvailable()
+qint64 YandexDiskManager::spaceAvailable()	const	
 //варианты:
 // 1 заблокировать поток, отправить запрос в другом потоке (Блокировка потока - плохо)
 // 2 добавить функцию updateAvailableSpace(), из этой ф-ции возвращать неактуальные данные
@@ -110,18 +112,18 @@ qint64 YandexDiskManager::spaceAvailable()	const	//FIXME spaceAvailable()
 	QBuffer *buf = new QBuffer;
 	buf->setData(body);
 	buf->open(QIODevice::ReadOnly);
-	QNetworkReply *reply = disk.sendCustomRequest(request, "PROPFIND", buf);		//WARNING
-	registerReply(reply);
+	QNetworkReply *reply = disk.sendCustomRequest(request, "PROPFIND", buf);	
+//	registerReply(reply);
 	netLog("PROPFIND", request, body);
 	buf->setParent(reply);
-	connect(reply, &QNetworkReply::finished, this, [&](){ setReplyFinished(reply); });		//CRUTCH
-	waitFor(reply);
+	waitForFinishedSignal(reply);
 
 	checkForHTTPErrors(reply);
 	if (HTTPstatus(reply) == 401) throw NotAuthorized();
 	QByteArray response = reply->readAll();
+	reply->deleteLater();
 	response.toLower();
-	int begin = response.indexOf("<d:quota-available-bytes>");
+	int begin = response.indexOf("<d:quota-available-bytes>");		//CRUTCH using XML parser is better
 	begin += QByteArray("<d:quota-available-bytes>").length();
 	int end = response.indexOf("</d:quota-available-bytes>");
 	QByteArray bytes = response.mid(begin, end - begin);
@@ -135,7 +137,8 @@ qint64 YandexDiskManager::spaceAvailable()	const	//FIXME spaceAvailable()
 
 void YandexDiskManager::setAuthType(AuthType type)
 {
-	//WARNING This function may cause an error if any operations are performed.
+	//WARNING unsafe if any replies are running
+	//if (!allReplies().isEmpty()) throw Error();
 	authorizationHeader.clear();
 	authtype = type;
 	authorize();
@@ -144,7 +147,6 @@ void YandexDiskManager::setAuthType(AuthType type)
 bool YandexDiskManager::_checkForHTTPErrors(QNetworkReply *reply, const char* file, const int line, const char* func) const
 {
 	netLog(reply);  //debug
-	setReplyFinished(reply);		//TODO убрать этот костыль
 	int code = HTTPstatus(reply);
 	int codeType = (code / 100) * 100;
 	if (codeType == 400 || codeType == 500) {
@@ -153,6 +155,30 @@ bool YandexDiskManager::_checkForHTTPErrors(QNetworkReply *reply, const char* fi
 		return true;
 	}
 	else return false;
+}
+
+void YandexDiskManager::createDirIfNecessary(ShortName dirname)
+{
+	if (dirname == ".") return;
+	QNetworkRequest request("https://webdav.yandex.ru/" + dirname);
+	request.setRawHeader("Authorization", authorizationHeader);
+	QNetworkReply* reply = disk.head(request);
+//	registerReply(reply);
+	waitForFinishedSignal(reply);
+	int status = HTTPstatus(reply);
+	if (HTTPstatus(reply) == 404) {
+		QFileInfo up(dirname);
+		auto tmp = up.path();
+		//tmp = up.path();
+		createDirIfNecessary(up.path());
+		try {
+			mkdir(dirname);
+		}
+		catch (ItsNotDir) {
+			throw InvalidPath();
+		}
+	}
+	delete reply;
 }
 
 bool YandexDiskManager::authorized() const
@@ -175,14 +201,12 @@ ReplyID YandexDiskManager::downloadFile(const ShortName& name, QSharedPointer<QI
 	QNetworkRequest request("https://webdav.yandex.ru/" + name);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.get(request);
-	registerReply(reply);
+//	registerReply(reply);
 	netLog("GET", request, "EMPTY");	//DEBUG
-	//connect(reply, &QNetworkReply::finished, this, &YandexDiskManager::fileDownloaded);		//хуйня, лямды лучше
 	connect(reply, &QNetworkReply::finished, this, [=](){ 
 		bool ok = false;
 		checkForHTTPErrors(reply);
 		QByteArray MD5hash = reply->rawHeader("Etag");
-		//QFile downloaded(name/*.absoluteFilePath()*/);
 		file->open(QIODevice::WriteOnly);
 		file->write(reply->readAll());
 		file->close();
@@ -194,7 +218,8 @@ ReplyID YandexDiskManager::downloadFile(const ShortName& name, QSharedPointer<QI
 		QByteArray fileHash = hashCalculator.result().toHex();
 		if (fileHash == MD5hash) ok = true;
 		if (!ok) qDebug() << QString::fromLocal8Bit("Хуйня");
-		emit done();
+		reply->deleteLater();
+		//emit done();
 	});	
 	return reply;
 }
@@ -203,10 +228,7 @@ ReplyID YandexDiskManager::downloadFile(const ShortName& name, QSharedPointer<QI
 ReplyID YandexDiskManager::uploadFile(const ShortName& name, QIODevice* file)
 {
 	//WARNING может не работать для файлов не в корне
-
-
-
-
+	createDirIfNecessary(QFileInfo(name).path());
 	QNetworkRequest request("https://webdav.yandex.ru/" + name);
 	request.setRawHeader("Authorization", authorizationHeader);
 	file->open(QIODevice::ReadOnly);
@@ -219,8 +241,8 @@ ReplyID YandexDiskManager::uploadFile(const ShortName& name, QIODevice* file)
 	request.setRawHeader("Sha256", sha256HashCalculator.result().toHex());
 	file->reset();
 	QNetworkReply *reply = disk.put(request, file);
-	registerReply(reply);
-	file->setParent(reply);		//WARNING
+//	registerReply(reply);
+	file->setParent(reply);	
 	netLog("PUT", request, "FILE");	
 	connect(reply, &QNetworkReply::finished, this, [=](){
 		checkForHTTPErrors(reply);
@@ -237,12 +259,13 @@ QDateTime YandexDiskManager::lastModified(const ShortName& name) const
 	QNetworkRequest request("https://webdav.yandex.ru/" + name);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.head(request);
-	registerReply(reply);
+//	registerReply(reply);
 	netLog("HEAD", request, "EMPTY");
-	connect(reply, &QNetworkReply::finished, this, [&](){ setReplyFinished(reply); });		//CRUTCH
-	waitFor(reply);
+	//connect(reply, &QNetworkReply::finished, this, [&](){ setReplyFinished(reply); });		//CRUTCH
+	waitForFinishedSignal(reply);
 	checkForHTTPErrors(reply);
 	QByteArray time = reply->rawHeader("Last-Modified");
+	delete reply;
 	if (time.isEmpty()) return QDateTime::fromTime_t(0);
 	return QDateTime::fromString(time, Qt::RFC2822Date);
 }
@@ -252,12 +275,13 @@ QByteArray YandexDiskManager::remoteMD5FileHash(const ShortName& filename) const
 	QNetworkRequest request("https://webdav.yandex.ru/" + filename);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.head(request);
-	registerReply(reply);
+//	registerReply(reply);
 	netLog("HEAD", request, "EMPTY");
-	connect(reply, &QNetworkReply::finished, this, [&](){ setReplyFinished(reply); });		//CRUTCH
-	waitFor(reply);
+	//connect(reply, &QNetworkReply::finished, this, [&](){ setReplyFinished(reply); });		//CRUTCH
+	waitForFinishedSignal(reply);
 	checkForHTTPErrors(reply);
 	QByteArray hash = reply->rawHeader("Etag");
+	delete reply;
 #if DEBUG
 	return hash;
 #else
@@ -265,50 +289,30 @@ QByteArray YandexDiskManager::remoteMD5FileHash(const ShortName& filename) const
 #endif
 }
 
-QByteArray YandexDiskManager::sendDebugRequest(QByteArray requestType, QString url, QByteArray body /*= QByteArray()*/, QList<QNetworkReply::RawHeaderPair> additionalHeaders /*= QList<QNetworkReply::RawHeaderPair>()*/)
-{
-	QNetworkRequest request(url); 
-	for (auto &header : additionalHeaders)
-		request.setRawHeader(header.first, header.second);
-	if (!request.hasRawHeader("Authorization"))
-		request.setRawHeader("Authorization", authorizationHeader);
-	
-	QBuffer *buf = new QBuffer;
-	buf->setData(body);
-	buf->open(QIODevice::ReadOnly);
-	QNetworkReply* reply;
-	if (requestType == "HEAD") reply = disk.head(request);	//CRUTCH makes it works
-	/*QNetworkReply **/else reply = disk.sendCustomRequest(request, requestType, buf);		//WARNING
-	connect(reply, &QNetworkReply::finished, this, [&](){		//FIXME race condition?
-		setReplyFinished(reply);
-	});		//CRUTCH
-	//connect(reply, static_cast<void (QNetworkReply::*)(QNetworkReply::NetworkError)>(&QNetworkReply::error), this, [&](QNetworkReply::NetworkError){		
-	//	setReplyFinished(reply);
-	//});		//CRUTCH
-	registerReply(reply);
-	QBuffer logBuf;
-	logBuf.open(QIODevice::Append);
-	netLog(requestType, request, body, &logBuf);
-	buf->setParent(reply);
-	waitFor(reply);
 
-	netLog(reply, &logBuf);
-	delete reply;
-	return logBuf.data();
-}
-
-void YandexDiskManager::mkdir(ShortName dir)
+void YandexDiskManager::mkdir(ShortName dir)		//TODO add DirName class
 {
 	QNetworkRequest request("https://webdav.yandex.ru/" + dir/*relative*/);
 	request.setRawHeader("Authorization", authorizationHeader);
 	QNetworkReply *reply = disk.sendCustomRequest(request, "MKCOL");
-	registerReply(reply);
-	netLog("MKCOL", request, "EMPTY");	//DEBUG
-	connect(reply, &QNetworkReply::finished, this, [=](){
+//	registerReply(reply);
+	netLog("MKCOL", request, "EMPTY");	
+	waitForFinishedSignal(reply);
+
+	checkForHTTPErrors(reply);
+	if (HTTPstatus(reply) == 405) {		//if resource already exists
+		//check if this resource is a file instead of a dir
+		QNetworkRequest request("https://webdav.yandex.ru/" + dir);
+		request.setRawHeader("Authorization", authorizationHeader);
+		QNetworkReply* reply = disk.head(request);		//TODO using PROPFIND is better
+//		registerReply(reply);
+		waitForFinishedSignal(reply);
 		checkForHTTPErrors(reply);
-		reply->deleteLater();
-		emit done();
-	});
+		if (reply->hasRawHeader("Etag")) throw ItsNotDir();	//dirs don't have MD5-hash 
+	}
+	delete reply;
+	//emit done();
+	
 }
 
 ReplyID YandexDiskManager::remove(const ShortName& name)
@@ -317,16 +321,48 @@ ReplyID YandexDiskManager::remove(const ShortName& name)
 	request.setRawHeader("Authorization", authorizationHeader);
 	//QNetworkReply *reply = disk.sendCustomRequest(request, "DELETE");
 	QNetworkReply *reply = disk.deleteResource(request);
-	registerReply(reply);
+//	registerReply(reply);
 	netLog("DELETE", request, "EMPTY");	//DEBUG
 	connect(reply, &QNetworkReply::finished, this, [=](){
 		checkForHTTPErrors(reply);
 		reply->deleteLater();
-		emit done();
+		//emit done();
 	});
 	return reply;
+	//TODO remove dir if empty
 }
 
 
+QByteArray YandexDiskManager::sendDebugRequest(QByteArray requestType, QString url, QByteArray body, QList<QNetworkReply::RawHeaderPair> additionalHeaders)
+{
+	QNetworkRequest request(url);
+	for (auto &header : additionalHeaders)
+		request.setRawHeader(header.first, header.second);
+	if (!request.hasRawHeader("Authorization"))
+		request.setRawHeader("Authorization", authorizationHeader);
 
+	QNetworkReply* reply;
+	requestType = requestType.toUpper();
+	if (requestType == "HEAD")		reply = disk.head(request);	//CRUTCH makes it works
+	else if (requestType == "GET")		reply = disk.get(request);
+	else if (requestType == "PUT")		reply = disk.put(request, body);
+	else if (requestType == "POST")		reply = disk.post(request, body);
+	else if (requestType == "DELETE")	reply = disk.deleteResource(request);
+	else {
+		QBuffer *buf = new QBuffer;
+		buf->setData(body);
+		buf->open(QIODevice::ReadOnly);
+		reply = disk.sendCustomRequest(request, requestType, buf);	
+		buf->setParent(reply);
+	}
+//	registerReply(reply);
+
+	QBuffer logBuf;
+	logBuf.open(QIODevice::Append);
+	netLog(requestType, request, body, &logBuf);
+	waitForFinishedSignal(reply);
+	netLog(reply, &logBuf);
+	delete reply;
+	return logBuf.data();
+}
 
