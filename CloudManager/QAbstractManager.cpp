@@ -45,41 +45,57 @@ void QAbstractManager::netLog(const QByteArray& type, const QNetworkRequest &req
 }
 
 
-void QAbstractManager::waitFor(ReplyID reply) const
+void QAbstractManager::waitFor(ReplyID replyid) const
+{
+	const QNetworkReply* reply= replyid;
+	if (reply == nullptr) {
+		qDebug() << "WARNING: reply == nullptr";
+		return;
+	}
+	//WARNING deadlock if reply has been already destroyed
+	/*static*/ QEventLoop loop;
+	connect(reply, &QNetworkReply::destroyed, &loop, &QEventLoop::quit);
+	loop.exec();
+	///*static*/ QTimer timer;
+	//connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+	//timer.start(50);
+	//while (!replyFinished(reply))
+	//{
+	//	loop.exec(QEventLoop::ExcludeUserInputEvents);
+	//}
+}
+
+void QAbstractManager::waitForFinishedSignal(QNetworkReply* reply) const
 {
 	if (reply == nullptr) {
 		qDebug() << "WARNING: reply == nullptr";
 		return;
 	}
+	//WARNING deadlock if reply has been already finished
 	/*static*/ QEventLoop loop;
-	/*static*/ QTimer timer;
-	connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-	timer.start(50);
-	while (!replyFinished(reply))
-	{
-		loop.exec(QEventLoop::ExcludeUserInputEvents);
-	}
+	connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+	loop.exec();
 }
-
-void QAbstractManager::registerReply(ReplyID reply) const		//FIXME race condition
-{
-	replies.insert(reply);
-}
-
-void QAbstractManager::setReplyFinished(ReplyID reply) const	//FIXME race condition
-{
-	if (!replies.contains(reply)) {
-		qDebug() << "ERROR: Race condition detected in setReplyFinished(): Deadlock is possible in waitFor()\n";
-		QThread::msleep(42);
-	}
-	replies.remove(reply);
-}
-
-bool QAbstractManager::replyFinished(ReplyID reply) const
-{
-	if (!replies.contains(reply)) return true;
-	else return reply->isFinished();
-}
+//
+//void QAbstractManager::registerReply(ReplyID reply) const		//FIXME race condition
+//{
+//	replies.insert(reply);
+//}
+//
+//void QAbstractManager::setReplyFinished(ReplyID reply) const	//FIXME race condition
+//{
+//	if (!replies.contains(reply)) {
+//		qDebug() << "ERROR: Race condition detected in setReplyFinished(): Deadlock is possible in waitFor()\n";
+//		//QThread::msleep(42);
+//	}
+//	replies.remove(reply);
+//}
+//
+//bool QAbstractManager::replyFinished(ReplyID reply) const
+//{
+//	if (!replies.contains(reply)) return true;
+//	else return reply->isFinished();
+//}
 
 
 

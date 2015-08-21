@@ -1,4 +1,7 @@
 #pragma once
+
+#include <QJsonDocument>
+#include <QJsonObject>
 //#include "WebDAVManager.h"
 #include "QAbstractManager.h"
 #define checkForHTTPErrors(x) _checkForHTTPErrors(x, __FILE__, __LINE__, QT_MESSAGELOG_FUNC); 
@@ -23,6 +26,7 @@ private:
 	time_t validUntil;
 	//====================== Private Methods =====================================
 	bool _checkForHTTPErrors(QNetworkReply *reply, const char* file, const int line, const char* func) const;
+	void createDirIfNecessary(ShortName dirname);
 protected:
 	//======================== Virtual Protected Methods =========================
 	bool authorized() const override final;

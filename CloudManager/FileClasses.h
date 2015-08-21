@@ -13,7 +13,8 @@ typedef QSet<LongName> LongNameSet;
 
 class FileDoesNotExist : public QException {};
 class NotImplemented : public QException {};
-class ItsDir : public QException {};
+class ItsNotFile : public QException {};
+class ItsNotDir : public QException {};
 
 class ShortName {
 	//Q_OBJECT
