@@ -105,7 +105,7 @@ protected slots:
 signals :
 	void newFilesInTheCloud(QList<QFileInfo>);
 	void statusChanged();
-	void done();		//CRUTCH
+	//void done();		//CRUTCH
 };
 
 //Yandex.Disk			WebDAV		REST

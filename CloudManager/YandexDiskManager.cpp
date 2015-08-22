@@ -9,11 +9,11 @@ YandexDiskManager::YandexDiskManager()
 	//restore settings
 	settings->beginGroup("yadisk");
 		authtype = static_cast<AuthType>( settings->value("aythtype", static_cast<int>(AuthType::OAuth)).toInt() );		// I really love static typing
-		authorizationHeader = settings->value("authorization").value<QByteArray>();	//TODO шифровать токен
+		authorizationHeader = settings->value("authorization").value<QByteArray>();	//TODO encrypt token
 	settings->endGroup();
 	//connect(&disk, &QNetworkAccessManager::finished, this, &QAbstractManager::setReplyFinished);	//FIXME сигнал посылается, когда получен ответ сервера, но это не значит, что закончилась обработка ответа
 	//есть смысл делать всё асинхронно
-	disk.connectToHostEncrypted("https://webdav.yandex.ru/");
+	disk.connectToHostEncrypted("https://webdav.yandex.ru/");	//WARNING add SSL errors handler
 }
 
 YandexDiskManager::~YandexDiskManager()
@@ -23,7 +23,7 @@ YandexDiskManager::~YandexDiskManager()
 		settings->setValue("authtype", static_cast<int>(authtype));
 		settings->setValue("authorization", QVariant::fromValue(authorizationHeader));
 	settings->endGroup();
-	//TODO завершить все операции
+	//TODO close all connections correctly
 }
 
 
@@ -227,7 +227,6 @@ ReplyID YandexDiskManager::downloadFile(const ShortName& name, QSharedPointer<QI
 
 ReplyID YandexDiskManager::uploadFile(const ShortName& name, QIODevice* file)
 {
-	//WARNING может не работать для файлов не в корне
 	createDirIfNecessary(QFileInfo(name).path());
 	QNetworkRequest request("https://webdav.yandex.ru/" + name);
 	request.setRawHeader("Authorization", authorizationHeader);
@@ -343,7 +342,7 @@ QByteArray YandexDiskManager::sendDebugRequest(QByteArray requestType, QString u
 
 	QNetworkReply* reply;
 	requestType = requestType.toUpper();
-	if (requestType == "HEAD")		reply = disk.head(request);	//CRUTCH makes it works
+	if (requestType == "HEAD")		reply = disk.head(request);	//CRUTCH this crutch makes it works
 	else if (requestType == "GET")		reply = disk.get(request);
 	else if (requestType == "PUT")		reply = disk.put(request, body);
 	else if (requestType == "POST")		reply = disk.post(request, body);
