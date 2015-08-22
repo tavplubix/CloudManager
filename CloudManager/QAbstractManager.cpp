@@ -102,7 +102,7 @@ void QAbstractManager::waitForFinishedSignal(QNetworkReply* reply) const
 QAbstractManager::QAbstractManager() : log("network.log")
 {
 	log.open(QIODevice::Append);
-	settings = new QSettings("tavplubix", "CloudManager");		//WARNING разным манагерам нужны разные настройки
+	settings = new QSettings("tavplubix", "CloudManager");		//FIXME разным манагерам нужны разные настройки
 	config = nullptr;
 	m_status = Status::Init;
 	action = ActionWithChanged::SaveNewest;
@@ -156,7 +156,7 @@ QByteArray QAbstractManager::localMD5FileHash(const LongName& filename)
 
 
 
-void QAbstractManager::syncAll()		//FIXME
+void QAbstractManager::syncAll()	
 {
 	auto files = config->filesInTheCloud();
 	for (auto remote : files) {
@@ -175,20 +175,20 @@ void QAbstractManager::syncAll()		//FIXME
 
 }
 
-void QAbstractManager::addFile(QFileInfo file)		//FIXME will not work in offline mode	//TODO throw exception in offline mode
+void QAbstractManager::addFile(QFileInfo file)		//FIXME will not work in offline mode	
 {
 	LongName name = file.absoluteFilePath();
 	config->addFile(name);
 	uploadFile(name, new QFile(name));
 }
 
-void QAbstractManager::removeFile(QFileInfo file)	//FIXME will not work in offline mode    //TODO throw exception in offline mode
+void QAbstractManager::removeFile(QFileInfo file)	//FIXME will not work in offline mode    
 {
 	LongName name = file.absoluteFilePath();
 	config->removeFile(name);
 }
 
-void QAbstractManager::removeFileData(QFileInfo)	//TODO implement
+void QAbstractManager::removeFileData(QFileInfo)	//UNDONE removeFileData()
 {
 	qDebug() << "Not Implemented";
 	throw NotImplemented();

@@ -16,6 +16,7 @@ void ConfigFile::invalidConfig()
 
 void ConfigFile::update()
 {
+	if (remoteResourceCaptured) return;
 	//if (m_locked) return; //WARNING
 	QJsonObject configJSON = getConfigJSON();
 	if (!configJSON.contains("managedFiles") && !configJSON["managedFiles"].isArray())  invalidConfig();
@@ -31,81 +32,9 @@ void ConfigFile::update()
 	managedFilesSet += f;	
 	//managedFilesSet -= removedFilesSet;
 }
-//
-//void ConfigFile::saveChanges()
-//{
-//	bool localLock = !locked();		//is it necessary?
-//	if (localLock) lock();
-//	update();
-//	QJsonArray newManagedFiles;
-//	for (auto i : files) newManagedFiles.append(i);
-//	files = newManagedFiles;
-//	QJsonArray newRemovedFiles;
-//	for (auto i : files) newRemovedFiles.append(i);
-//	removedFiles = newRemovedFiles;
-//	QJsonObject confObj;
-//	confObj.insert("managedFiles", files);
-//	confObj.insert("removedFiles", removedFiles);
-//	QByteArray configFile = QJsonDocument(confObj).toJson();
-//	auto buf = new QBuffer;
-//	buf->setData(configFile);
-//	manager->waitFor( manager->uploadFile(configFileName, buf) );
-//	if (localLock) unlock();
-//}
 
-ConfigFile::ConfigFile(QAbstractManager* manager)
-	: manager(manager), m_locked(false)
+void ConfigFile::saveChanges()
 {
-	update();
-}
-
-
-void ConfigFile::lock()
-{
-	if (locked()) throw Unlockable();
-	try{
-		manager->waitFor( manager->lockFile(configFileName) );
-	}
-	catch (...) {
-		throw Unlockable();
-	}
-	m_locked = true;
-	update();
-}
-
-void ConfigFile::unlock()
-{
-	if (!m_locked) return;
-	//saveChanges();
-	manager->waitFor( manager->unlockFile(configFileName) );
-	m_locked = false;
-}
-
-bool ConfigFile::locked() const
-{
-	if (m_locked) return true;
-	return manager->fileLocked(configFileName);
-}
-
-void ConfigFile::addFile(const ShortName& file)
-{
-	lock();
-	managedFilesSet.insert(file);
-	QJsonArray newManagedFiles;
-	for (auto i : managedFilesSet) newManagedFiles.append((QString)i);
-	QJsonObject confObj;
-	confObj.insert("managedFiles", newManagedFiles);
-	QByteArray configFile = QJsonDocument(confObj).toJson();
-	auto buf = new QBuffer;
-	buf->setData(configFile);
-	manager->waitFor( manager->uploadFile(configFileName, buf) );
-	unlock();
-}
-
-void ConfigFile::removeFile(const ShortName& file)
-{
-	lock();
-	managedFilesSet.remove(file);
 	QJsonArray newManagedFiles;
 	for (auto i : managedFilesSet) newManagedFiles.append((QString)i);
 	QJsonObject confObj;
@@ -114,12 +43,79 @@ void ConfigFile::removeFile(const ShortName& file)
 	auto buf = new QBuffer;
 	buf->setData(configFile);
 	manager->waitFor(manager->uploadFile(configFileName, buf));
-	unlock();
-	manager->remove(file);		//WARNING 
 }
 
-void ConfigFile::removeFileData(const ShortName& file)
+ConfigFile::ConfigFile(QAbstractManager* manager)
+	: manager(manager), remoteResourceCaptured(false), remoteResourceRequired(false), guards(0), mutex(QMutex::Recursive)
 {
+	uncapturingTimer.setSingleShot(true);
+	uncapturingTimer.setInterval(defaultUncapturingTimeout);
+	update();
+}
+
+
+ConfigFile::CaptureGuard ConfigFile::trycapture()
+{
+	uncapturingTimer.stop();
+	remoteResourceRequired = true;
+	if (remoteResourceCaptured) return CaptureGuard(this);
+	//if (locked()) throw Unlockable();
+	try{
+		manager->waitFor(manager->lockFile(configFileName));
+	}
+	catch (...) {
+		throw Unlockable();
+	}
+	remoteResourceCaptured = true;
+	update();
+	return CaptureGuard(this);
+}
+
+void ConfigFile::uncapture(int mtimeout)
+{
+	if (guards) return;
+	if (!remoteResourceCaptured) return;
+	remoteResourceRequired = false;
+	auto uncaptureFinally = [&]() {
+		if (remoteResourceRequired) return;
+		if (remoteResourceCaptured) {
+			remoteResourceCaptured = false;
+			saveChanges();
+			manager->waitFor(manager->unlockFile(configFileName));
+		}
+	};
+	if (mtimeout < 0) {
+		uncaptureFinally();
+		return;
+	}
+	else {
+		connect(&uncapturingTimer, &QTimer::timeout, this, uncaptureFinally);
+		uncapturingTimer.start(mtimeout);
+	}
+}
+
+// bool ConfigFile::locked() const
+// {
+// 	if (remoteResourseCaptured) return false;
+// 	return manager->fileLocked(configFileName);
+// }
+
+void ConfigFile::addFile(const ShortName& file)
+{
+	auto guard = trycapture();
+	managedFilesSet.insert(file);
+}
+
+void ConfigFile::removeFile(const ShortName& file)
+{
+	auto guard = trycapture();
+	managedFilesSet.remove(file);
+	manager->remove(file);		
+}
+
+void ConfigFile::removeFileData(const ShortName& file)	//UNDONE removeFileData()
+{
+	auto guard = trycapture();
 	qDebug() << "Not Implemented";
 	throw NotImplemented();
 }
@@ -148,5 +144,64 @@ QJsonObject ConfigFile::getConfigJSON()
 
 ConfigFile::~ConfigFile()
 {
-	if (locked()) unlock();
+	if (remoteResourceCaptured) {
+		saveChanges();
+		manager->waitFor(manager->unlockFile(configFileName));
+	}
+}
+
+ConfigFile::AutoLock::AutoLock(ConfigFile * cf)
+	: cf(cf)
+{	
+	
+	bool ok = false;
+	while (!ok) {
+		try {
+			guard = cf->trycapture();
+			ok = true;
+		}
+		catch (Unlockable) {
+			//QThread::msleep(200);	//is it better to run event loop?
+			QEventLoop loop;
+			QTimer::singleShot(200, &loop, &QEventLoop::quit);
+			loop.exec();
+		}
+	}
+}
+
+ConfigFile::AutoLock::~AutoLock()
+{
+	cf->uncapture();
+}
+
+
+ConfigFile::CaptureGuard::CaptureGuard(ConfigFile * cf)
+	: cf(cf)
+{
+	if (cf == nullptr) return;
+	cf->mutex.lock();
+	cf->guards++;
+}
+
+ConfigFile::CaptureGuard::CaptureGuard(CaptureGuard&& cg)
+	: cf(cg.cf)
+{
+	cg.cf = nullptr;
+}
+
+ConfigFile::CaptureGuard& ConfigFile::CaptureGuard::operator=(CaptureGuard&& cg)
+{
+	if (cf != cg.cf) {
+		cf = cg.cf;
+		cg.cf = nullptr;
+	}
+	return *this;
+}
+
+ConfigFile::CaptureGuard::~CaptureGuard()
+{
+	if (cf == nullptr) return;
+	cf->guards--;
+	if (cf->guards == 0) cf->uncapture();
+	cf->mutex.unlock();
 }

@@ -22,6 +22,8 @@
 #include <QSharedPointer>
 #include <QException>
 #include <QDebug>
+#include <QThread>
+#include <QMutex>
 
 
 

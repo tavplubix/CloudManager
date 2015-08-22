@@ -2,15 +2,15 @@
 
 
 
+//TODO process any files (not only F:/Backups/CloudManager/*)
 
 ShortName::ShortName(const QString& s)
 {
 	QDir rootDir = "F:/Backups/CloudManager/";	//Hardcoded temporary
-	//TODO обрабатывать файлы не в rootDir
 	QFileInfo file(s);
 	if (file.isRelative()) {
 		auto tmp = rootDir.absolutePath();
-		file = rootDir.absoluteFilePath(s);		//FIXME segfault - init rootDir before using
+		file = rootDir.absoluteFilePath(s);		
 		if (!file.exists())
 			//throw FileDoesNotExist();
 			qDebug() << "WARNING: File " + s + " does not exist\n";
