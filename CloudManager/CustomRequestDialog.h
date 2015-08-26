@@ -4,7 +4,7 @@
 #include <QNetworkReply>
 #include "ui_customRequestDialog.h"
 
-class QAbstractManager;
+class AbstractCloud;
 
 class CustomRequestDialog :
 	public QDialog
@@ -13,13 +13,13 @@ class CustomRequestDialog :
 private:
 	Ui::CustomRequestDialogUI ui;
 	QList<QNetworkReply::RawHeaderPair> headers;
-	QAbstractManager* manager;
+	AbstractCloud* cloud;
 private slots:
 	void clear();
 	void send();
 	void addHeader();
 public:
-	CustomRequestDialog(QAbstractManager* manager, QWidget* parent = nullptr);
+	CustomRequestDialog(AbstractCloud* cloud, QWidget* parent = nullptr);
 	~CustomRequestDialog();
 };
 

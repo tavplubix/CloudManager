@@ -12,7 +12,7 @@ class FileAlreadyExists : QException {};
 class Unlockable : QException {};
 class IsNotLocked : QException {};
 
-class QAbstractManager;
+class AbstractCloud;
 typedef QSet<ShortName> ShortNameSet;
 
 class ConfigFile :		//FIXME make singleton
@@ -34,7 +34,7 @@ class ConfigFile :		//FIXME make singleton
 		CaptureGuard& operator = (CaptureGuard&&);
 		~CaptureGuard();
 	};
-	QAbstractManager* manager;
+	AbstractCloud* cloud;
 	void invalidConfig();
 	void update();
 	void saveChanges(); 
@@ -45,7 +45,7 @@ class ConfigFile :		//FIXME make singleton
 	///*volatile*/ ConfigFileState state;
 	static const int defaultUncapturingTimeout = 5000;	//msecs
 	/*volatile*/ bool remoteResourceCaptured;
-	/*volatile*/ bool remoteResourceRequired;
+	/*volatile*/ bool remoteResourceRequired;	//TODO use QObject::blockSignals() for QTimer instead
 	CaptureGuard trycapture();
 	void uncapture(int mtimeout = defaultUncapturingTimeout);	//msesc
 	//TODO add device counter for removed files
@@ -56,7 +56,7 @@ class ConfigFile :		//FIXME make singleton
 	//bool m_locked;
 	static const ShortName configFileName; //  = ".cloudmanager";
 public:
-	ConfigFile(QAbstractManager*const manager);
+	ConfigFile(AbstractCloud*const cloud);
 	ConfigFile(const ConfigFile&) = delete;
 	ConfigFile(const ConfigFile&&) = delete;
 	ConfigFile operator = (const ConfigFile&) = delete;

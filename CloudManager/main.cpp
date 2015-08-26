@@ -4,6 +4,8 @@
 
 int main(int argc, char *argv[])
 {
+	QCoreApplication::setOrganizationName("tavplubix");
+	QCoreApplication::setApplicationName("CloudManager");
 	QApplication a(argc, argv);
 	MainCloudManager w;
 	w.show();
@@ -11,7 +13,8 @@ int main(int argc, char *argv[])
 		return a.exec();
 	}
 	catch (...) {
-		qDebug() << QString::fromLocal8Bit("exception");
+		qDebug() << QString::fromLocal8Bit("EXCEPTION");
+		throw;
 	}
 	return 0;
 }

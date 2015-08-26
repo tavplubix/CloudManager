@@ -1,5 +1,5 @@
 #include "ConfigFile.h"
-#include "QAbstractManager.h"
+#include "AbstractCloud.h"
 #include "FileClasses.h"
 
 
@@ -42,11 +42,11 @@ void ConfigFile::saveChanges()
 	QByteArray configFile = QJsonDocument(confObj).toJson();
 	auto buf = new QBuffer;
 	buf->setData(configFile);
-	manager->waitFor(manager->uploadFile(configFileName, buf));
+	cloud->waitFor(cloud->uploadFile(configFileName, buf));
 }
 
-ConfigFile::ConfigFile(QAbstractManager* manager)
-	: manager(manager), remoteResourceCaptured(false), remoteResourceRequired(false), guards(0), mutex(QMutex::Recursive)
+ConfigFile::ConfigFile(AbstractCloud* cloud)
+	: cloud(cloud), remoteResourceCaptured(false), remoteResourceRequired(false), guards(0), mutex(QMutex::Recursive)
 {
 	uncapturingTimer.setSingleShot(true);
 	uncapturingTimer.setInterval(defaultUncapturingTimeout);
@@ -61,7 +61,7 @@ ConfigFile::CaptureGuard ConfigFile::trycapture()
 	if (remoteResourceCaptured) return CaptureGuard(this);
 	//if (locked()) throw Unlockable();
 	try{
-		manager->waitFor(manager->lockFile(configFileName));
+		cloud->waitFor(cloud->lockFile(configFileName));
 	}
 	catch (...) {
 		throw Unlockable();
@@ -81,7 +81,7 @@ void ConfigFile::uncapture(int mtimeout)
 		if (remoteResourceCaptured) {
 			remoteResourceCaptured = false;
 			saveChanges();
-			manager->waitFor(manager->unlockFile(configFileName));
+			cloud->waitFor(cloud->unlockFile(configFileName));
 		}
 	};
 	if (mtimeout < 0) {
@@ -110,7 +110,7 @@ void ConfigFile::removeFile(const ShortName& file)
 {
 	auto guard = trycapture();
 	managedFilesSet.remove(file);
-	manager->remove(file);		
+	cloud->remove(file);		
 }
 
 void ConfigFile::removeFileData(const ShortName& file)	//UNDONE removeFileData()
@@ -130,7 +130,7 @@ QJsonObject ConfigFile::getConfigJSON()
 {
 	ShortNameSet remote;
 	QSharedPointer<QBuffer> configBuf(new QBuffer);
-	manager->waitFor(manager->downloadFile(configFileName, configBuf));
+	cloud->waitFor(cloud->downloadFile(configFileName, configBuf));
 	if (configBuf->bytesAvailable() == 0) {
 		//TODO нужна отдельная функция для случая, когда манагер запущен впервые
 		qDebug() << "WARNING: config JSON is empty\n";
@@ -146,7 +146,7 @@ ConfigFile::~ConfigFile()
 {
 	if (remoteResourceCaptured) {
 		saveChanges();
-		manager->waitFor(manager->unlockFile(configFileName));
+		cloud->waitFor(cloud->unlockFile(configFileName));
 	}
 }
 

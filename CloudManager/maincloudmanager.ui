@@ -24,17 +24,17 @@
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout">
-     <item row="2" column="0">
-      <widget class="QPushButton" name="refresh">
+     <item row="5" column="0">
+      <widget class="QPushButton" name="addCloud">
        <property name="text">
-        <string>Refresh</string>
+        <string>Add Cloud</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="0">
-      <widget class="QPushButton" name="remove">
+     <item row="7" column="0">
+      <widget class="QPushButton" name="customRequestButton">
        <property name="text">
-        <string>Remove</string>
+        <string>Send Custom Request</string>
        </property>
       </widget>
      </item>
@@ -42,6 +42,13 @@
       <widget class="QPushButton" name="sync">
        <property name="text">
         <string>Sync</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QPushButton" name="remove">
+       <property name="text">
+        <string>Remove</string>
        </property>
       </widget>
      </item>
@@ -55,10 +62,17 @@
      <item row="1" column="0">
       <widget class="QTableWidget" name="table"/>
      </item>
-     <item row="5" column="0">
-      <widget class="QPushButton" name="customRequestButton">
+     <item row="2" column="0">
+      <widget class="QPushButton" name="refresh">
        <property name="text">
-        <string>Send Custom Request</string>
+        <string>Refresh</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="0">
+      <widget class="QPushButton" name="removeCloud">
+       <property name="text">
+        <string>Remove cloud</string>
        </property>
       </widget>
      </item>
