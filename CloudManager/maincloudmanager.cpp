@@ -80,24 +80,54 @@ void MainCloudManager::sync()
 
 void MainCloudManager::customRequest()
 {
-	auto tmp = manager->getConstCloudByID(manager->managedClouds().first());
-	auto cloud = const_cast<AbstractCloud*>(tmp);	//CRUTCH
-	auto dialog = CustomRequestDialog(cloud, this);
+	QStringList list;
+	QMap<QString, CloudID> clouds;
+	auto cloudIDs = manager->managedClouds();
+	for (auto id : cloudIDs) {
+		auto cloud = manager->getConstCloudByID(id);
+		QString serviceName = cloud->userName() + "@" + cloud->serviceName();
+		list.push_back(serviceName);
+		clouds[serviceName] = id;
+	}
+	bool ok;
+	QString choosenCloud = QInputDialog::getItem(this, "Custom request", "Choose one of this clouds:", list, 0, false, &ok);
+	if (!ok) return;
+	auto choosenCloud_cp = manager->getConstCloudByID(clouds[choosenCloud]);
+	auto choosenCloud_p = const_cast<AbstractCloud*>(choosenCloud_cp);
+	auto dialog = CustomRequestDialog(choosenCloud_p, this);
 	dialog.show();
 	dialog.exec();
 }
 
 void MainCloudManager::addCloud()	//FIXME addCloud()
 {
-	if (!manager->managedClouds().isEmpty()) return;	
-	manager->addCloud(CloudType::YandexDisk);
+	QMap<QString, CloudType> cloudTypes;
+	cloudTypes["YandexDisk"] = CloudType::YandexDisk;
+	cloudTypes["Other"] = CloudType::Other;
+
+	bool ok;
+	QString choosenType = QInputDialog::getItem(this, "Custom request", "Choose one of this clouds:", cloudTypes.keys(), 0, false, &ok);
+	if (!ok) return;	
+	manager->addCloud(cloudTypes[choosenType]);
 	refresh();
 }
 
 void MainCloudManager::removeCloud()	//FIXME removeCloud()
 {
-	if (manager->managedClouds().isEmpty()) return;	
-	manager->removeCloud(manager->managedClouds().first());
+	QStringList list;
+	QMap<QString, CloudID> clouds;
+	auto cloudIDs = manager->managedClouds();
+	for (auto id : cloudIDs) {
+		auto cloud = manager->getConstCloudByID(id);
+		QString serviceName = cloud->userName() + "@" + cloud->serviceName();
+		list.push_back(serviceName);
+		clouds[serviceName] = id;
+	}
+	bool ok;
+	QString choosenCloud = QInputDialog::getItem(this, "Custom request", "Choose one of this clouds:", list, 0, false, &ok);
+	if (!ok) return;
+	//if (manager->managedClouds().isEmpty()) return;	
+	manager->removeCloud(clouds[choosenCloud]);
 	refresh();
 }
 
