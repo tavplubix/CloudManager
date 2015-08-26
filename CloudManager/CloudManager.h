@@ -22,8 +22,9 @@ public:
 	bool removeCloud(CloudID cloud/*, remove mode*/);
 	CloudIDList managedClouds() const;
 	const AbstractCloud* getConstCloudByID(CloudID id) { return clouds.contains(id) ? clouds[id]:nullptr; }
-	//void addFile(const QString& filename);
-	//void removeFile(const QString& filename);
+	void addFile(const QFileInfo& fileinfo);
+	void removeFile(const QFileInfo& fileinfo);
+	void syncAll();
 	~CloudManager();
 };
 

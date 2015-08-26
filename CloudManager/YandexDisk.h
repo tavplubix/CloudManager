@@ -46,8 +46,8 @@ public:
 
 	QDateTime lastModified(const ShortName& name) const override final;
 	QByteArray remoteMD5FileHash(const ShortName& filename) const override final;
-	QString serviceName() override { return "YandexDisk"; };
-	QString userName() override;
+	QString serviceName() const override { return "YandexDisk"; };
+	QString userName() const override;
 #if DEBUG
 	QByteArray sendDebugRequest(QByteArray requestType, QString url, QByteArray body = QByteArray(),
 		QList<QNetworkReply::RawHeaderPair> additionalHeaders = QList<QNetworkReply::RawHeaderPair>()) override final;
