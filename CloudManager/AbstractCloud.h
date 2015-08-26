@@ -30,7 +30,7 @@ class ConfigFile;
 typedef const QNetworkReply* ReplyID;
 
 
-class QAbstractManager 
+class AbstractCloud 
 	: public QObject
 {
 	Q_OBJECT
@@ -42,15 +42,16 @@ public:
 private:
 	//===================== Private Fields ============================
 //	mutable QSet<ReplyID> replies;
-	QAbstractManager::ActionWithChanged action;
+	AbstractCloud::ActionWithChanged action;
 	mutable QFile log;
 	ConfigFile *config;
 	//===================== Private Methods ===========================
 	ReplyID downloadFile(const ShortName& name, QIODevice* file) { QSharedPointer<QIODevice> tmp(file);  return downloadFile(name, tmp); }
 protected:
 	//===================== Protected Fields ==========================
-	QAbstractManager::Status m_status;
-	QSettings *settings;
+	AbstractCloud::Status m_status;
+	//QSettings *settings;
+	const QString qsettingsGroup;
 	//===================== Protected Methods =========================
 	void netLog(QNetworkReply *reply, QIODevice* logDevice = nullptr) const;
 	void netLog(const QByteArray& type, const QNetworkRequest &request, const QByteArray &body, QIODevice* logDevice = nullptr) const;
@@ -75,10 +76,10 @@ protected:
 	//virtual QString managerID() const = 0;		//костыль 
 public:
 	//====================== Public Methods ===========================
-	QAbstractManager();
+	AbstractCloud(QString qsettingsGroup = QString());
 	virtual void init();	//нужна чтобы не ебаться с виртуальным конструктором
-	QAbstractManager::Status status() const;
-	void setActionWithChanged(QAbstractManager::ActionWithChanged action);
+	AbstractCloud::Status status() const;
+	void setActionWithChanged(AbstractCloud::ActionWithChanged action);
 	QList<LongName> managedFiles() const;
 	QByteArray localMD5FileHash(const LongName& filename);
 	void removeFile(QFileInfo);		//removes file from this cloud only
@@ -86,7 +87,9 @@ public:
 	void addFile(QFileInfo);
 	void syncAll();
 	// ===================== Virtual Public Methods ===================
-	virtual ~QAbstractManager();
+	virtual ~AbstractCloud();
+	virtual QString serviceName() { return "unknown"; };
+	virtual QString userName() { return "unknown"; };
 #if DEBUG
 	virtual QByteArray sendDebugRequest(QByteArray requestType, QString url, QByteArray body = QByteArray(),
 		QList<QNetworkReply::RawHeaderPair> additionalHeaders = QList<QNetworkReply::RawHeaderPair>()) = 0;

@@ -3,13 +3,13 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 //#include "WebDAVManager.h"
-#include "QAbstractManager.h"
+#include "AbstractCloud.h"
 #define checkForHTTPErrors(x) _checkForHTTPErrors(x, __FILE__, __LINE__, QT_MESSAGELOG_FUNC); 
 #define HTTPstatus(reply) reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt()
 
-class YandexDiskManager :
+class YandexDisk :
 	//public WebDAVManager
-	public QAbstractManager
+	public AbstractCloud
 {
 	Q_OBJECT
 public:
@@ -39,14 +39,15 @@ protected:
 	virtual void mkdir(ShortName dir);
 public:
 	//=========================== Public Methods =================================
-	YandexDiskManager();
-	~YandexDiskManager();
-	YandexDiskManager::AuthType authType() const { return authtype; }
-	void setAuthType(YandexDiskManager::AuthType type);
+	YandexDisk(QString qsettingsGroup = QString());
+	~YandexDisk();
+	YandexDisk::AuthType authType() const { return authtype; }
+	void setAuthType(YandexDisk::AuthType type);
 
 	QDateTime lastModified(const ShortName& name) const override final;
 	QByteArray remoteMD5FileHash(const ShortName& filename) const override final;
-
+	QString serviceName() override { return "YandexDisk"; };
+	QString userName() override;
 #if DEBUG
 	QByteArray sendDebugRequest(QByteArray requestType, QString url, QByteArray body = QByteArray(),
 		QList<QNetworkReply::RawHeaderPair> additionalHeaders = QList<QNetworkReply::RawHeaderPair>()) override final;

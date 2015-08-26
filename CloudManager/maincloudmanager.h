@@ -4,7 +4,7 @@
 #include <QtWidgets/QMainWindow>
 #include "ui_maincloudmanager.h"
 //#include "CommonIncludes.h"
-#include "YandexDiskManager.h"
+#include "CloudManager.h"
 #include <QFileDialog>
 
 class MainCloudManager : public QMainWindow
@@ -16,7 +16,8 @@ public:
 	~MainCloudManager();
 
 private:
-	QList<QAbstractManager*> stroages;
+	//CloudManager* manager;
+	QList<AbstractCloud*> stroages;
 	Ui::MainCloudManagerClass ui;
 	const QDir rootDir = "F:/Backups/CloudManager/";	//Hardcoded temporary
 private slots:
@@ -24,6 +25,8 @@ private slots:
 	void remove();
 	void sync();
 	void customRequest();
+	void addCloud();
+	void removeCloud();
 };
 
 

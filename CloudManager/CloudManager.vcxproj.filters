@@ -50,24 +50,6 @@
     <ClCompile Include="GeneratedFiles\qrc_maincloudmanager.cpp">
       <Filter>Generated Files</Filter>
     </ClCompile>
-    <ClCompile Include="QAbstractManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_QAbstractManager.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_QAbstractManager.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="YandexDiskManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_YandexDiskManager.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_YandexDiskManager.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="FileClasses.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -89,6 +71,27 @@
     <ClCompile Include="GeneratedFiles\Release\moc_CustomRequestDialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="AbstractCloud.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AbstractCloud.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AbstractCloud.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="CloudManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="YandexDisk.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_YandexDisk.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_YandexDisk.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="maincloudmanager.h">
@@ -100,12 +103,6 @@
     <CustomBuild Include="maincloudmanager.qrc">
       <Filter>Resource Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="QAbstractManager.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="YandexDiskManager.h">
-      <Filter>Header Files</Filter>
-    </CustomBuild>
     <CustomBuild Include="ConfigFile.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
@@ -113,6 +110,12 @@
       <Filter>Form Files</Filter>
     </CustomBuild>
     <CustomBuild Include="CustomRequestDialog.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="AbstractCloud.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="YandexDisk.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
   </ItemGroup>
@@ -128,6 +131,9 @@
     </ClInclude>
     <ClInclude Include="GeneratedFiles\ui_customRequestDialog.h">
       <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CloudManager.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

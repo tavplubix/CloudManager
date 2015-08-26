@@ -1,9 +1,9 @@
-#include "QAbstractManager.h"
+#include "AbstractCloud.h"
 #include "FileClasses.h"
 #include "ConfigFile.h"
 
 
-void QAbstractManager::netLog(QNetworkReply *reply, QIODevice* logDevice) const
+void AbstractCloud::netLog(QNetworkReply *reply, QIODevice* logDevice) const
 {
 //#if NETLOG
 	//static QFile log("network.log");
@@ -24,7 +24,7 @@ void QAbstractManager::netLog(QNetworkReply *reply, QIODevice* logDevice) const
 //#endif
 }
 
-void QAbstractManager::netLog(const QByteArray& type, const QNetworkRequest &request, const QByteArray &body, QIODevice* logDevice) const
+void AbstractCloud::netLog(const QByteArray& type, const QNetworkRequest &request, const QByteArray &body, QIODevice* logDevice) const
 {
 //#if NETLOG
 	//static QFile log("network.log");
@@ -45,7 +45,7 @@ void QAbstractManager::netLog(const QByteArray& type, const QNetworkRequest &req
 }
 
 
-void QAbstractManager::waitFor(ReplyID replyid) const
+void AbstractCloud::waitFor(ReplyID replyid) const
 {
 	const QNetworkReply* reply= replyid;
 	if (reply == nullptr) {
@@ -65,7 +65,7 @@ void QAbstractManager::waitFor(ReplyID replyid) const
 	//}
 }
 
-void QAbstractManager::waitForFinishedSignal(QNetworkReply* reply) const
+void AbstractCloud::waitForFinishedSignal(QNetworkReply* reply) const
 {
 	if (reply == nullptr) {
 		qDebug() << "WARNING: reply == nullptr";
@@ -99,17 +99,18 @@ void QAbstractManager::waitForFinishedSignal(QNetworkReply* reply) const
 
 
 
-QAbstractManager::QAbstractManager() : log("network.log")
+AbstractCloud::AbstractCloud(QString qsettingsGroup) 
+	: log("network.log"), qsettingsGroup(qsettingsGroup)
 {
 	log.open(QIODevice::Append);
-	settings = new QSettings("tavplubix", "CloudManager");		//FIXME разным манагерам нужны разные настройки
+	//settings = new QSettings("tavplubix", "CloudManager");		//FIXME разным манагерам нужны разные настройки		//TODO использовать префикс для beginGroup()
 	config = nullptr;
 	m_status = Status::Init;
 	action = ActionWithChanged::SaveNewest;
 }
 
 
-void QAbstractManager::init()
+void AbstractCloud::init()
 {
 	if (!authorized()) 
 		waitFor( authorize() );
@@ -122,17 +123,17 @@ void QAbstractManager::init()
 	m_status = Status::Ready;
 }
 
-QAbstractManager::Status QAbstractManager::status() const
+AbstractCloud::Status AbstractCloud::status() const
 {
 	return m_status;
 }
 
-void QAbstractManager::setActionWithChanged(ActionWithChanged act)
+void AbstractCloud::setActionWithChanged(ActionWithChanged act)
 {
 	action = act;
 }
 
-QList<LongName> QAbstractManager::managedFiles() const
+QList<LongName> AbstractCloud::managedFiles() const
 {
 	auto tmp = config->filesInTheCloud().toList();
 	QList<LongName> result;
@@ -140,7 +141,7 @@ QList<LongName> QAbstractManager::managedFiles() const
 	return result;
 }
 
-QByteArray QAbstractManager::localMD5FileHash(const LongName& filename)
+QByteArray AbstractCloud::localMD5FileHash(const LongName& filename)
 {
 	QCryptographicHash hash(QCryptographicHash::Md5);
 	QFile file(filename);
@@ -156,7 +157,7 @@ QByteArray QAbstractManager::localMD5FileHash(const LongName& filename)
 
 
 
-void QAbstractManager::syncAll()	
+void AbstractCloud::syncAll()	
 {
 	auto files = config->filesInTheCloud();
 	for (auto remote : files) {
@@ -175,29 +176,29 @@ void QAbstractManager::syncAll()
 
 }
 
-void QAbstractManager::addFile(QFileInfo file)		//FIXME will not work in offline mode	
+void AbstractCloud::addFile(QFileInfo file)		//FIXME will not work in offline mode	
 {
 	LongName name = file.absoluteFilePath();
 	config->addFile(name);
 	uploadFile(name, new QFile(name));
 }
 
-void QAbstractManager::removeFile(QFileInfo file)	//FIXME will not work in offline mode    
+void AbstractCloud::removeFile(QFileInfo file)	//FIXME will not work in offline mode    
 {
 	LongName name = file.absoluteFilePath();
 	config->removeFile(name);
 }
 
-void QAbstractManager::removeFileData(QFileInfo)	//UNDONE removeFileData()
+void AbstractCloud::removeFileData(QFileInfo)	//UNDONE removeFileData()
 {
 	qDebug() << "Not Implemented";
 	throw NotImplemented();
 }
 
-QAbstractManager::~QAbstractManager()
+AbstractCloud::~AbstractCloud()
 {
 	//settings->beginGroup(managerID());
 	//settings->setValue("managedFiles", QVariant::fromValue(localFiles));
 	//settings->endGroup();
-	delete settings;
+	//delete settings;
 }
