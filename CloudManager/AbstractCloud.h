@@ -88,8 +88,8 @@ public:
 	void syncAll();
 	// ===================== Virtual Public Methods ===================
 	virtual ~AbstractCloud();
-	virtual QString serviceName() { return "unknown"; };
-	virtual QString userName() { return "unknown"; };
+	virtual QString serviceName() const { return "unknown"; };
+	virtual QString userName() const { return "unknown"; };
 #if DEBUG
 	virtual QByteArray sendDebugRequest(QByteArray requestType, QString url, QByteArray body = QByteArray(),
 		QList<QNetworkReply::RawHeaderPair> additionalHeaders = QList<QNetworkReply::RawHeaderPair>()) = 0;

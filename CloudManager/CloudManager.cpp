@@ -1,4 +1,5 @@
 #include "CloudManager.h"
+#include "FileClasses.h"
 
 AbstractCloud* CloudManager::createCloud(CloudType type, const QString& qsettingsGroup /*= QString()*/)
 {
@@ -67,6 +68,38 @@ CloudIDList CloudManager::managedClouds() const
 	for (auto iter = clouds.cbegin(); iter != clouds.end(); ++iter) 
 		list.push_back(iter.key());
 	return std::move(list);
+}
+
+void CloudManager::addFile(const QFileInfo& fileinfo)	//OPTIMIZE
+{
+	quint64 maxSpace = 0;
+	AbstractCloud* maxSpaceCloud = nullptr;
+	for (auto cloud : clouds) {
+		quint64 space = cloud->spaceAvailable();
+		if (maxSpace < space) {
+			maxSpace = space;
+			maxSpaceCloud = cloud;
+		}
+	}
+	if (maxSpaceCloud == nullptr || maxSpace < fileinfo.size()) {
+		qDebug() << "WARNING: CloudManager::addFile(): clouds not found";
+		return;
+	}
+	maxSpaceCloud->addFile(fileinfo);
+}
+
+void CloudManager::removeFile(const QFileInfo& fileinfo)
+{
+	LongName lname(fileinfo.absoluteFilePath());
+	for (auto cloud : clouds)
+		if (cloud->managedFiles().contains(lname))
+			cloud->removeFile(fileinfo);
+}
+
+void CloudManager::syncAll()
+{
+	for (auto cloud : clouds)
+		cloud->syncAll();
 }
 
 CloudManager::~CloudManager()

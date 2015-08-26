@@ -16,8 +16,8 @@ public:
 	~MainCloudManager();
 
 private:
-	//CloudManager* manager;
-	QList<AbstractCloud*> stroages;
+	CloudManager* manager;
+	//QList<AbstractCloud*> stroages;
 	Ui::MainCloudManagerClass ui;
 	const QDir rootDir = "F:/Backups/CloudManager/";	//Hardcoded temporary
 private slots:

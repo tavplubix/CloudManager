@@ -294,7 +294,7 @@ QByteArray YandexDisk::remoteMD5FileHash(const ShortName& filename) const
 }
 
 
-QString YandexDisk::userName()
+QString YandexDisk::userName() const
 {
 	QNetworkRequest request(QUrl("https://webdav.yandex.ru/?userinfo"));
 	request.setRawHeader("Authorization", authorizationHeader);

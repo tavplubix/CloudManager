@@ -4,21 +4,21 @@
 #include "CustomRequestDialog.h"
 
 MainCloudManager::MainCloudManager(QWidget *parent)
-	: QMainWindow(parent)
+	: QMainWindow(parent), manager(nullptr)
 {
 	ui.setupUi(this);
 	ui.centralWidget->setLayout(ui.gridLayout);
-	//manager = new CloudManager();
-	stroages.push_back(new YandexDisk("yadisk"));
+	manager = new CloudManager();
+	//stroages.push_back(new YandexDisk("yadisk"));
 	//stroages.push_back(new OneDriveManager);
 	ui.table->setColumnCount(5);
- 	for(auto i : stroages)
- 		i->init();
+ 	//for(auto i : stroages)
+ 	//	i->init();
 	QFileInfoList files = rootDir.entryInfoList();
-	for (auto i : stroages)
+	//for (auto i : stroages)
 		for (auto j : files)
 			if (j.isFile())
-				i->addFile(j);
+				manager->addFile(j);
 	connect(this, &QMainWindow::destroyed, qApp, &QApplication::quit);
 	connect(ui.refresh, &QPushButton::clicked, this, &MainCloudManager::refresh);
 	connect(ui.remove, &QPushButton::clicked, this, &MainCloudManager::remove);
@@ -30,22 +30,24 @@ MainCloudManager::MainCloudManager(QWidget *parent)
 
 MainCloudManager::~MainCloudManager()
 {
-	//if (manager) delete manager;
-	for (auto i : stroages)
-		delete i;
+	if (manager) delete manager;
+	//for (auto i : stroages)
+	//	delete i;
 }
 
 void MainCloudManager::refresh()
 {
 	//QAbstractManager *i = stroages.first();
-	for (auto i : stroages) {
-		QString serviceName = i->userName() + "@" + i->serviceName();
-		QList<LongName> files = i->managedFiles();
+	auto cloudIDs = manager->managedClouds();
+	for (auto id : cloudIDs) {
+		auto cloud = manager->getConstCloudByID(id);
+		QString serviceName = cloud->userName() + "@" + cloud->serviceName();
+		QList<LongName> files = cloud->managedFiles();
 		ui.table->setRowCount(files.size());
 		int row = 0;
 		for (auto j : files) {
 			QTableWidgetItem *name = new QTableWidgetItem(j);
-			QTableWidgetItem *ctime = new QTableWidgetItem(i->lastModified(j).toString());
+			QTableWidgetItem *ctime = new QTableWidgetItem(cloud->lastModified(j).toString());
 			QTableWidgetItem *ltime = new QTableWidgetItem(QFileInfo(j).lastModified().toString());
 			QTableWidgetItem *service = new QTableWidgetItem(serviceName);
 			ui.table->setItem(row, 0, name);
@@ -60,34 +62,42 @@ void MainCloudManager::refresh()
 void MainCloudManager::remove()
 {
 	int n = ui.table->currentRow();
-	QString file = stroages.first()->managedFiles().at(n);
-	stroages.first()->removeFile(file);
+	auto item = ui.table->item(n, 0);
+	QString file = item->text();
+	manager->removeFile(file);
 	refresh();
 }
 
 void MainCloudManager::sync()
 {
-	for (auto i : stroages)
-		i->syncAll();
+	QFileInfoList files = rootDir.entryInfoList();
+	for (auto file : files)
+		if (file.isFile())
+			manager->addFile(file);
+	manager->syncAll();
 	refresh();
-	//stroages.first()->uploadFile(QString("uploadtest.txt"));
 }
 
 void MainCloudManager::customRequest()
 {
-	auto dialog = CustomRequestDialog(stroages.first(), this);
+	auto tmp = manager->getConstCloudByID(manager->managedClouds().first());
+	auto cloud = const_cast<AbstractCloud*>(tmp);	//CRUTCH
+	auto dialog = CustomRequestDialog(cloud, this);
 	dialog.show();
 	dialog.exec();
 }
 
-void MainCloudManager::addCloud()
+void MainCloudManager::addCloud()	//FIXME addCloud()
 {
-
-
+	if (!manager->managedClouds().isEmpty()) return;	
+	manager->addCloud(CloudType::YandexDisk);
+	refresh();
 }
 
-void MainCloudManager::removeCloud()
+void MainCloudManager::removeCloud()	//FIXME removeCloud()
 {
-
+	if (manager->managedClouds().isEmpty()) return;	
+	manager->removeCloud(manager->managedClouds().first());
+	refresh();
 }
 
