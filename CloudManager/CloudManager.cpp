@@ -26,6 +26,7 @@ CloudType CloudManager::getCloudType(AbstractCloud* cloud)
 
 CloudManager::CloudManager()
 {
+	qInfo("CloudManager()");
 	QSettings settings;
 	int size = settings.beginReadArray("Clouds");
 	for (int i = 0; i < size; i++) {
@@ -70,16 +71,22 @@ CloudIDList CloudManager::managedClouds() const
 	return std::move(list);
 }
 
-void CloudManager::addFile(const QFileInfo& fileinfo)	//OPTIMIZE
+void CloudManager::addFile(const QFileInfo& fileinfo)	//OPTIMIZE CloudManager::addFile()
 {
+	QSet<LongName> allFiles;	//CRUTCH in CloudManager::addFile()
 	quint64 maxSpace = 0;
 	AbstractCloud* maxSpaceCloud = nullptr;
 	for (auto cloud : clouds) {
+		allFiles += cloud->managedFiles().toSet();		//CRUTCH in CloudManager::addFile()
 		quint64 space = cloud->spaceAvailable();
 		if (maxSpace < space) {
 			maxSpace = space;
 			maxSpaceCloud = cloud;
 		}
+	}
+	if (allFiles.contains(fileinfo)) {
+		qDebug() << "File already exists\n";
+		return;
 	}
 	if (maxSpaceCloud == nullptr || maxSpace < fileinfo.size()) {
 		qDebug() << "WARNING: CloudManager::addFile(): clouds not found";
@@ -93,7 +100,7 @@ void CloudManager::removeFile(const QFileInfo& fileinfo)
 	LongName lname(fileinfo.absoluteFilePath());
 	for (auto cloud : clouds)
 		if (cloud->managedFiles().contains(lname))
-			cloud->removeFile(fileinfo);
+			cloud->removeFileData(fileinfo);
 }
 
 void CloudManager::syncAll()
@@ -104,6 +111,7 @@ void CloudManager::syncAll()
 
 CloudManager::~CloudManager()
 {
+	qInfo("~CloudManager()");
 	QSettings settings;
 	settings.beginWriteArray("Clouds");
 	int i = 0, size = clouds.size();

@@ -22,6 +22,7 @@ class ShortName {
 public:
 	ShortName(const QString& s);
 	ShortName(const LongName& ln);
+	ShortName(const QFileInfo& qfi);
 	//ShortName(const File& fi);
 	operator QString() const { return shortName; };
 };
@@ -32,6 +33,7 @@ class LongName {
 public:
 	LongName(const QString& s);
 	LongName(const ShortName& sn);
+	LongName(const QFileInfo& qfi);
 	//ShortName(const File& fi);
 	operator QString() const { return longName; };
 };

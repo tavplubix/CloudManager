@@ -5,6 +5,7 @@
 YandexDisk::YandexDisk(QString qsettingsGroup)
 	: AbstractCloud(qsettingsGroup)
 {
+	qInfo("YandexDisk()");
 	oauth = nullptr;
 	m_status = Status::Init;
 	//restore settings
@@ -15,13 +16,14 @@ YandexDisk::YandexDisk(QString qsettingsGroup)
 		authorizationHeader = settings.value("authorization").value<QByteArray>();	//TODO encrypt token
 		settings.endGroup();
 	}
-	//connect(&disk, &QNetworkAccessManager::finished, this, &QAbstractManager::setReplyFinished);	//FIXME сигнал посылается, когда получен ответ сервера, но это не значит, что закончилась обработка ответа
+	//connect(&disk, &QNetworkAccessManager::finished, this, &QAbstractManager::setReplyFinished);	// сигнал посылается, когда получен ответ сервера, но это не значит, что закончилась обработка ответа
 	//есть смысл делать всё асинхронно
 	disk.connectToHostEncrypted("https://webdav.yandex.ru/");	//WARNING add SSL errors handler
 }
 
 YandexDisk::~YandexDisk()
 {
+	qInfo("~YandexDisk()");
 	//save settings
 	if (!qsettingsGroup.isEmpty()) {
 		QSettings settings;
@@ -304,9 +306,12 @@ QString YandexDisk::userName() const
 	checkForHTTPErrors(reply);
 	QByteArray body = reply->readAll();
 	int begin = body.indexOf("login:");
-	int end = body.indexOf('\n');
+	int end = body.indexOf('\n', begin);
 	if (begin < 0) return "unknown";
-	else return body.mid(begin + qstrlen("login:"), ++end ? end : -1);
+	else {
+		begin += qstrlen("login:");
+		return body.mid(begin, end - begin);
+	}
 }
 
 void YandexDisk::mkdir(ShortName dir)		//TODO add DirName class

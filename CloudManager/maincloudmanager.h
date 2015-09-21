@@ -20,6 +20,8 @@ private:
 	//QList<AbstractCloud*> stroages;
 	Ui::MainCloudManagerClass ui;
 	const QDir rootDir = "F:/Backups/CloudManager/";	//Hardcoded temporary
+	void restoreGeometry();
+	void saveGeometry();
 private slots:
 	void refresh();
 	void remove();

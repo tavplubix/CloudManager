@@ -48,6 +48,7 @@ void ConfigFile::saveChanges()
 ConfigFile::ConfigFile(AbstractCloud* cloud)
 	: cloud(cloud), remoteResourceCaptured(false), remoteResourceRequired(false), guards(0), mutex(QMutex::Recursive)
 {
+	qInfo("ConfigFile()");
 	uncapturingTimer.setSingleShot(true);
 	uncapturingTimer.setInterval(defaultUncapturingTimeout);
 	update();
@@ -116,8 +117,10 @@ void ConfigFile::removeFile(const ShortName& file)
 void ConfigFile::removeFileData(const ShortName& file)	//UNDONE removeFileData()
 {
 	auto guard = trycapture();
-	qDebug() << "Not Implemented";
-	throw NotImplemented();
+
+	cloud->remove(file);
+	qDebug() << "removeFileData(): Not Implemented Correctly";
+	//throw NotImplemented();
 }
 
 ShortNameSet ConfigFile::filesInTheCloud() 
@@ -144,6 +147,7 @@ QJsonObject ConfigFile::getConfigJSON()
 
 ConfigFile::~ConfigFile()
 {
+	qInfo("~ConfigFile()");
 	if (remoteResourceCaptured) {
 		saveChanges();
 		cloud->waitFor(cloud->unlockFile(configFileName));

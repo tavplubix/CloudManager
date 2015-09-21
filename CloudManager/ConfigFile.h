@@ -22,13 +22,13 @@ class ConfigFile :		//FIXME make singleton
 	friend class AutoLock;
 	friend class CaptureGuard;
 	int guards;		//CRUTCH
-	QMutex mutex;
+	QMutex mutex;	//FIXME mutex
 	class CaptureGuard {	//TODO add a counter of a references
 		friend class ConfigFile;
 		ConfigFile * cf;
 		CaptureGuard(ConfigFile * cf = nullptr);
 		CaptureGuard(const CaptureGuard&) = delete;
-		CaptureGuard& operator = (const CaptureGuard&) = delete;
+		CaptureGuard& operator = (const CaptureGuard&) = delete;	
 	public:
 		CaptureGuard(CaptureGuard&&);
 		CaptureGuard& operator = (CaptureGuard&&);

@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
 		return a.exec();
 	}
 	catch (...) {
-		qDebug() << QString::fromLocal8Bit("EXCEPTION");
+		qInfo("EXCEPTION");
 		throw;
 	}
 	return 0;
