@@ -102,8 +102,8 @@ void AbstractCloud::waitForFinishedSignal(QNetworkReply* reply) const
 AbstractCloud::AbstractCloud(QString qsettingsGroup) 
 	: log("network.log"), qsettingsGroup(qsettingsGroup)
 {
+	qInfo("AbstractCloud()");
 	log.open(QIODevice::Append);
-	//settings = new QSettings("tavplubix", "CloudManager");		//FIXME разным манагерам нужны разные настройки		//TODO использовать префикс для beginGroup()
 	config = nullptr;
 	m_status = Status::Init;
 	action = ActionWithChanged::SaveNewest;
@@ -189,14 +189,16 @@ void AbstractCloud::removeFile(QFileInfo file)	//FIXME will not work in offline 
 	config->removeFile(name);
 }
 
-void AbstractCloud::removeFileData(QFileInfo)	//UNDONE removeFileData()
+void AbstractCloud::removeFileData(QFileInfo file)
 {
-	qDebug() << "Not Implemented";
-	throw NotImplemented();
+	QString filename = LongName(file.absoluteFilePath());
+	QFile(filename).remove();
+	config->removeFileData(filename);
 }
 
 AbstractCloud::~AbstractCloud()
 {
+	qInfo("~AbstractCloud()");
 	//settings->beginGroup(managerID());
 	//settings->setValue("managedFiles", QVariant::fromValue(localFiles));
 	//settings->endGroup();

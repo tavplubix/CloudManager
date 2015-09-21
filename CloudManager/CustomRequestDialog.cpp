@@ -63,7 +63,9 @@ void CustomRequestDialog::addHeader()
 CustomRequestDialog::CustomRequestDialog(AbstractCloud *cloud, QWidget* parent)
 	: QDialog(parent), cloud(cloud)
 {
+	qInfo("CustomRequestDialog()");
 	ui.setupUi(this);
+	setWindowTitle(cloud->userName() + "@" + cloud->serviceName());
 	setLayout(ui.gridLayout);
 	//ui.centralWidget->setLayout(ui.gridLayout);
 	connect(ui.clear, &QPushButton::clicked, this, &CustomRequestDialog::clear);
@@ -74,4 +76,5 @@ CustomRequestDialog::CustomRequestDialog(AbstractCloud *cloud, QWidget* parent)
 
 CustomRequestDialog::~CustomRequestDialog()
 {
+	qInfo("~CustomRequestDialog()");
 }

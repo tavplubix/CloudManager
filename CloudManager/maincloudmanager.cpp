@@ -2,23 +2,31 @@
 #include "FileClasses.h"
 #include "CommonIncludes.h"
 #include "CustomRequestDialog.h"
+#include <QDirIterator>
 
 MainCloudManager::MainCloudManager(QWidget *parent)
 	: QMainWindow(parent), manager(nullptr)
 {
+	qInfo("MainCloudManager");
 	ui.setupUi(this);
 	ui.centralWidget->setLayout(ui.gridLayout);
+	ui.table->setColumnCount(5);
+	restoreGeometry();
 	manager = new CloudManager();
 	//stroages.push_back(new YandexDisk("yadisk"));
 	//stroages.push_back(new OneDriveManager);
-	ui.table->setColumnCount(5);
  	//for(auto i : stroages)
  	//	i->init();
-	QFileInfoList files = rootDir.entryInfoList();
 	//for (auto i : stroages)
-		for (auto j : files)
-			if (j.isFile())
-				manager->addFile(j);
+
+	QDirIterator iter(rootDir, QDirIterator::Subdirectories | QDirIterator::FollowSymlinks);
+	while (iter.hasNext()) {
+		auto info = iter.fileInfo();
+		if (info.isFile())
+			manager->addFile(info);
+		iter.next();
+	}
+
 	connect(this, &QMainWindow::destroyed, qApp, &QApplication::quit);
 	connect(ui.refresh, &QPushButton::clicked, this, &MainCloudManager::refresh);
 	connect(ui.remove, &QPushButton::clicked, this, &MainCloudManager::remove);
@@ -26,11 +34,15 @@ MainCloudManager::MainCloudManager(QWidget *parent)
 	connect(ui.customRequestButton, &QPushButton::clicked, this, &MainCloudManager::customRequest);
 	connect(ui.addCloud, &QPushButton::clicked, this, &MainCloudManager::addCloud);
 	connect(ui.removeCloud, &QPushButton::clicked, this, &MainCloudManager::removeCloud);
+
+	refresh();
 }
 
 MainCloudManager::~MainCloudManager()
 {
+	qInfo("MainCloudManager");
 	if (manager) delete manager;
+	saveGeometry();
 	//for (auto i : stroages)
 	//	delete i;
 }
@@ -39,12 +51,13 @@ void MainCloudManager::refresh()
 {
 	//QAbstractManager *i = stroages.first();
 	auto cloudIDs = manager->managedClouds();
+	int row = 0;
+	ui.table->setRowCount(0);
 	for (auto id : cloudIDs) {
 		auto cloud = manager->getConstCloudByID(id);
 		QString serviceName = cloud->userName() + "@" + cloud->serviceName();
 		QList<LongName> files = cloud->managedFiles();
-		ui.table->setRowCount(files.size());
-		int row = 0;
+		ui.table->setRowCount(ui.table->rowCount() + files.size());
 		for (auto j : files) {
 			QTableWidgetItem *name = new QTableWidgetItem(j);
 			QTableWidgetItem *ctime = new QTableWidgetItem(cloud->lastModified(j).toString());
@@ -59,7 +72,7 @@ void MainCloudManager::refresh()
 	}
 }
 
-void MainCloudManager::remove()
+void MainCloudManager::remove()		//FIXME remove
 {
 	int n = ui.table->currentRow();
 	auto item = ui.table->item(n, 0);
@@ -99,7 +112,7 @@ void MainCloudManager::customRequest()
 	dialog.exec();
 }
 
-void MainCloudManager::addCloud()	//FIXME addCloud()
+void MainCloudManager::addCloud()	
 {
 	QMap<QString, CloudType> cloudTypes;
 	cloudTypes["YandexDisk"] = CloudType::YandexDisk;
@@ -112,7 +125,7 @@ void MainCloudManager::addCloud()	//FIXME addCloud()
 	refresh();
 }
 
-void MainCloudManager::removeCloud()	//FIXME removeCloud()
+void MainCloudManager::removeCloud()
 {
 	QStringList list;
 	QMap<QString, CloudID> clouds;
@@ -130,4 +143,33 @@ void MainCloudManager::removeCloud()	//FIXME removeCloud()
 	manager->removeCloud(clouds[choosenCloud]);
 	refresh();
 }
+
+
+
+void MainCloudManager::restoreGeometry()
+{
+	QSettings settings;
+	settings.beginGroup("MainWindowGeometry");
+	int w = settings.value("WindowWidth", width()).toInt();
+	int h = settings.value("WindowHeight", height()).toInt();
+	resize(w, h);
+	for (int i = 0; i < ui.table->columnCount(); ++i) {
+		int w = settings.value("ColumnWidth" + QString::number(i), ui.table->columnWidth(i)).toInt();
+		ui.table->setColumnWidth(i, w);
+	}
+	settings.endGroup();
+}
+
+void MainCloudManager::saveGeometry()
+{
+	QSettings settings;
+	settings.beginGroup("MainWindowGeometry");
+	settings.setValue("WindowWidth", width());
+	settings.setValue("WindowHeight", height());
+	for (int i = 0; i < ui.table->columnCount(); ++i) 
+		settings.setValue("ColumnWidth" + QString::number(i), ui.table->columnWidth(i));
+	settings.endGroup();
+}
+
+
 
