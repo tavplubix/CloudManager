@@ -4,10 +4,12 @@
 #include <QJsonObject>
 //#include "WebDAVManager.h"
 #include "AbstractCloud.h"
+#include "OAuth.h"
+
 #define checkForHTTPErrors(x) _checkForHTTPErrors(x, __FILE__, __LINE__, QT_MESSAGELOG_FUNC); 
 #define HTTPstatus(reply) reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt()
 
-class YandexDisk :
+class YandexDiskWebDav :
 	//public WebDAVManager
 	public AbstractCloud
 {
@@ -32,17 +34,17 @@ protected:
 	bool authorized() const override final;
 	ReplyID authorize() override final;
 	//QString managerID() const override { return "42"; };
-	qint64 spaceAvailable() const override final;
+	qint64 m_spaceAvailable() const override final;
 	ReplyID downloadFile(const ShortName& name, QSharedPointer<QIODevice> file) override final;
 	ReplyID uploadFile(const ShortName& name, QIODevice* file) override final;
 	ReplyID remove(const ShortName& name) override final;
 	virtual void mkdir(ShortName dir);
 public:
 	//=========================== Public Methods =================================
-	YandexDisk(QString qsettingsGroup = QString());
-	~YandexDisk();
-	YandexDisk::AuthType authType() const { return authtype; }
-	void setAuthType(YandexDisk::AuthType type);
+	YandexDiskWebDav(QString qsettingsGroup = QString());
+	~YandexDiskWebDav();
+	YandexDiskWebDav::AuthType authType() const { return authtype; }
+	void setAuthType(YandexDiskWebDav::AuthType type);
 
 	QDateTime lastModified(const ShortName& name) const override final;
 	QByteArray remoteMD5FileHash(const ShortName& filename) const override final;

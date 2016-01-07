@@ -76,37 +76,17 @@ void AbstractCloud::waitForFinishedSignal(QNetworkReply* reply) const
 	connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
 	loop.exec();
 }
-//
-//void QAbstractManager::registerReply(ReplyID reply) const		//FIXME race condition
-//{
-//	replies.insert(reply);
-//}
-//
-//void QAbstractManager::setReplyFinished(ReplyID reply) const	//FIXME race condition
-//{
-//	if (!replies.contains(reply)) {
-//		qDebug() << "ERROR: Race condition detected in setReplyFinished(): Deadlock is possible in waitFor()\n";
-//		//QThread::msleep(42);
-//	}
-//	replies.remove(reply);
-//}
-//
-//bool QAbstractManager::replyFinished(ReplyID reply) const
-//{
-//	if (!replies.contains(reply)) return true;
-//	else return reply->isFinished();
-//}
-
 
 
 AbstractCloud::AbstractCloud(QString qsettingsGroup) 
-	: log("network.log"), qsettingsGroup(qsettingsGroup)
+	: log("network.log"), qsettingsGroup(qsettingsGroup), spaceAvailableCache(0)
 {
-	qInfo("AbstractCloud()");
 	log.open(QIODevice::Append);
 	config = nullptr;
 	m_status = Status::Init;
 	action = ActionWithChanged::SaveNewest;
+	timer300s.setInterval(300 * 1000);
+	connect(&timer300s, &QTimer::timeout, this, [&](){ if (m_status == Status::Ready) spaceAvailableCache = m_spaceAvailable(); });
 }
 
 
@@ -115,11 +95,12 @@ void AbstractCloud::init()
 	if (!authorized()) 
 		waitFor( authorize() );
 	config = new ConfigFile(this);
-	
+	spaceAvailableCache = m_spaceAvailable();
 	//settings->beginGroup(managerID());
 	//local = settings->value("managedFiles", QVariant::fromValue(ShortNameSet())).value<ShortNameSet>();
 	//settings->endGroup();
 	//сравнить файлы, время последнего изменения
+	timer300s.start();
 	m_status = Status::Ready;
 }
 
@@ -133,12 +114,12 @@ void AbstractCloud::setActionWithChanged(ActionWithChanged act)
 	action = act;
 }
 
-QList<LongName> AbstractCloud::managedFiles() const
+QSet<LongName> AbstractCloud::managedFiles() const
 {
-	auto tmp = config->filesInTheCloud().toList();
-	QList<LongName> result;
-	for (auto i : tmp) result.push_back(i);
-	return result;
+	//auto tmp = config->filesInTheCloud();	//OPTIMIZE 1342ms
+	//QSet<LongName> result;
+	//for (auto i : tmp) result.insert(i);		//OPTIMIZE 800ms
+	return config->filesInTheCloud();
 }
 
 QByteArray AbstractCloud::localMD5FileHash(const LongName& filename)
@@ -160,20 +141,31 @@ QByteArray AbstractCloud::localMD5FileHash(const LongName& filename)
 void AbstractCloud::syncAll()	
 {
 	auto files = config->filesInTheCloud();
-	for (auto remote : files) {
-		LongName local = remote;
-		QFileInfo localInfo = local;
+	for (auto longName : files) {
+		ShortName shortName = longName;
+		QFileInfo localInfo = longName;
 		if (!localInfo.exists())
-			downloadFile(remote, new QFile(local));
-		else if (localMD5FileHash(local) != remoteMD5FileHash(remote)) {
+			downloadFile(shortName, new QFile(longName));
+		else if (localMD5FileHash(longName) != remoteMD5FileHash(shortName)) {
 			QDateTime ltime = localInfo.lastModified();
-			QDateTime rtime = lastModified(remote);
-			if (rtime < ltime) uploadFile(remote, new QFile(local));
-			else downloadFile(remote, new QFile(local));
+			QDateTime rtime = lastModified(shortName);
+			if (rtime < ltime) uploadFile(shortName, new QFile(longName));
+			else downloadFile(shortName, new QFile(longName));
 		}
 		//else file has not been changed
 	}
 
+}
+
+qint64 AbstractCloud::spaceAvailable() const
+{
+	//static time_t lastUpdate;
+	//time_t now = time(nullptr);
+	//if (now - lastUpdate > 150) {
+	//	spaceAvailableCache = m_spaceAvailable();
+	//	lastUpdate = now;
+	//}
+	return spaceAvailableCache;
 }
 
 void AbstractCloud::addFile(QFileInfo file)		//FIXME will not work in offline mode	
@@ -198,7 +190,6 @@ void AbstractCloud::removeFileData(QFileInfo file)
 
 AbstractCloud::~AbstractCloud()
 {
-	qInfo("~AbstractCloud()");
 	//settings->beginGroup(managerID());
 	//settings->setValue("managedFiles", QVariant::fromValue(localFiles));
 	//settings->endGroup();

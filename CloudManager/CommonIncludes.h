@@ -24,6 +24,7 @@
 #include <QDebug>
 #include <QThread>
 #include <QMutex>
+#include <QtConcurrent>
 
 
 

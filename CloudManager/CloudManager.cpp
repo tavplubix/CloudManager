@@ -5,8 +5,8 @@ AbstractCloud* CloudManager::createCloud(CloudType type, const QString& qsetting
 {
 	AbstractCloud* newCloud = nullptr;
 	switch (type) {
-	case CloudType::YandexDisk:
-		newCloud = new YandexDisk(qsettingsGroup);
+	case CloudType::YandexDiskWebDav:
+		newCloud = new YandexDiskWebDav(qsettingsGroup);
 		break;
 	default:
 		qDebug() << "\n\nERROR: CloudManager::createCloud(): unknown cloudType: cloud wasn't created\n\n";
@@ -19,14 +19,13 @@ AbstractCloud* CloudManager::createCloud(CloudType type, const QString& qsetting
 CloudType CloudManager::getCloudType(AbstractCloud* cloud)
 {
 	QByteArray className = cloud->metaObject()->className();
-	if (className == "YandexDisk") return CloudType::YandexDisk;
+	if (className == "YandexDisk") return CloudType::YandexDiskWebDav;
 	//else if (className == smth) return CloudType::smth;
 	else return CloudType::Other;
 }
 
 CloudManager::CloudManager()
 {
-	qInfo("CloudManager()");
 	QSettings settings;
 	int size = settings.beginReadArray("Clouds");
 	for (int i = 0; i < size; i++) {
@@ -34,8 +33,9 @@ CloudManager::CloudManager()
 		CloudType type = static_cast<CloudType>( settings.value("CloudType", QVariant(static_cast<int>(CloudType::Other))).toInt() );
 		CloudID id = settings.value("CloudID", CloudID(0)).toInt();
 		QString qsettingsGroup = "CloudGroup" + QString::number(id);
-		AbstractCloud* newCloud = createCloud(type, qsettingsGroup);
+		AbstractCloud* newCloud = createCloud(type, qsettingsGroup);		//SLOW 43%
 		clouds[id] = newCloud;
+		allManagedFiles += newCloud->managedFiles();
 	}
 	settings.endArray();
 }
@@ -73,18 +73,19 @@ CloudIDList CloudManager::managedClouds() const
 
 void CloudManager::addFile(const QFileInfo& fileinfo)	//OPTIMIZE CloudManager::addFile()
 {
-	QSet<LongName> allFiles;	//CRUTCH in CloudManager::addFile()
+	//QSet<LongName> allFiles;	//CRUTCH in CloudManager::addFile()
 	quint64 maxSpace = 0;
 	AbstractCloud* maxSpaceCloud = nullptr;
 	for (auto cloud : clouds) {
-		allFiles += cloud->managedFiles().toSet();		//CRUTCH in CloudManager::addFile()
-		quint64 space = cloud->spaceAvailable();
+		//allFiles += cloud->managedFiles();		//OPTIMIZE 2138ms = 2,1s	35%
+		quint64 space = cloud->spaceAvailable();		//OPTIMIZE 546ms = 0.5s		9%
 		if (maxSpace < space) {
 			maxSpace = space;
 			maxSpaceCloud = cloud;
 		}
 	}
-	if (allFiles.contains(fileinfo)) {
+	//if (allFiles.contains(fileinfo)) {
+	if (allManagedFiles.contains(fileinfo)) {
 		qDebug() << "File already exists\n";
 		return;
 	}
@@ -111,7 +112,6 @@ void CloudManager::syncAll()
 
 CloudManager::~CloudManager()
 {
-	qInfo("~CloudManager()");
 	QSettings settings;
 	settings.beginWriteArray("Clouds");
 	int i = 0, size = clouds.size();

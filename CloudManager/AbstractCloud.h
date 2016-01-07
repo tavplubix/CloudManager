@@ -45,13 +45,14 @@ private:
 	AbstractCloud::ActionWithChanged action;
 	mutable QFile log;
 	ConfigFile *config;
+	QTimer timer300s;
 	//===================== Private Methods ===========================
 	ReplyID downloadFile(const ShortName& name, QIODevice* file) { QSharedPointer<QIODevice> tmp(file);  return downloadFile(name, tmp); }
 protected:
 	//===================== Protected Fields ==========================
 	AbstractCloud::Status m_status;
-	//QSettings *settings;
 	const QString qsettingsGroup;
+	mutable qint64 spaceAvailableCache;
 	//===================== Protected Methods =========================
 	void netLog(QNetworkReply *reply, QIODevice* logDevice = nullptr) const;
 	void netLog(const QByteArray& type, const QNetworkRequest &request, const QByteArray &body, QIODevice* logDevice = nullptr) const;
@@ -69,6 +70,7 @@ protected:
 	virtual ReplyID downloadFile(const ShortName& name, QSharedPointer<QIODevice> file) = 0;
 	virtual ReplyID uploadFile(const ShortName& name, QIODevice* file) = 0;		//становится влдельцем QIODevice* file
 	virtual ReplyID remove(const ShortName& name) = 0;
+	virtual qint64 m_spaceAvailable() const = 0;		//in bites
 	//блокировать один файл или весть сервис целиком? (блокировка файла конфигурации == блокировка сервиса)
 	virtual ReplyID lockFile(const ShortName& name /*= configFileName*/) { qDebug() << "WARNING: lockFile() is not implemented\n"; return nullptr; }
 	virtual ReplyID unlockFile(const ShortName& name /*= configFileName*/) { qDebug() << "WARNING: unlockFile() is not implemented\n"; return nullptr; }
@@ -80,12 +82,13 @@ public:
 	virtual void init();	//нужна чтобы не ебаться с виртуальным конструктором
 	AbstractCloud::Status status() const;
 	void setActionWithChanged(AbstractCloud::ActionWithChanged action);
-	QList<LongName> managedFiles() const;
+	QSet<LongName> managedFiles() const;
 	QByteArray localMD5FileHash(const LongName& filename);
 	void removeFile(QFileInfo);		//removes file from this cloud only
 	void removeFileData(QFileInfo);		//removes file from all devices
 	void addFile(QFileInfo);
 	void syncAll();
+	qint64 spaceAvailable() const;		//in bites
 	// ===================== Virtual Public Methods ===================
 	virtual ~AbstractCloud();
 	virtual QString serviceName() const { return "unknown"; };
@@ -95,7 +98,6 @@ public:
 		QList<QNetworkReply::RawHeaderPair> additionalHeaders = QList<QNetworkReply::RawHeaderPair>()) = 0;
 #endif
 	//============ Pure Virtual Public Methods ========================
-	virtual qint64 spaceAvailable() const = 0;		//in bites
 	virtual QDateTime lastModified(const ShortName& name) const = 0;
 	virtual QByteArray remoteMD5FileHash(const ShortName& filename) const = 0;
 

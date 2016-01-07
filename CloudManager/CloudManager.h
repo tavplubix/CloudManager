@@ -1,10 +1,11 @@
 #pragma once
 #include <QObject>
+#include <QThreadPool>
 #include "CommonIncludes.h"
 #include "AbstractCloud.h"
 #include "YandexDisk.h"
 
-enum class CloudType : int { YandexDisk, Other };
+enum class CloudType : int { YandexDiskWebDav, YandexDiskREST, Other };
 typedef QList<AbstractCloud> CloudList;
 typedef int CloudID;
 typedef QList<CloudID> CloudIDList;
@@ -13,9 +14,10 @@ class CloudManager :
 	public QObject
 {
 	 //CloudList clouds;
-	 QMap<CloudID, AbstractCloud*> clouds;
-	 static AbstractCloud* createCloud(CloudType type, const QString& qsettingsGroup = QString());
-	 static CloudType getCloudType(AbstractCloud* cloud);		//uses RTTI 
+	QMap<CloudID, AbstractCloud*> clouds;
+	QSet<LongName> allManagedFiles;
+	static AbstractCloud* createCloud(CloudType type, const QString& qsettingsGroup = QString());
+	static CloudType getCloudType(AbstractCloud* cloud);		//uses RTTI 
 public:
 	CloudManager();
 	CloudID addCloud(CloudType type);

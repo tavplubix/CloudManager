@@ -7,12 +7,11 @@
 MainCloudManager::MainCloudManager(QWidget *parent)
 	: QMainWindow(parent), manager(nullptr)
 {
-	qInfo("MainCloudManager");
 	ui.setupUi(this);
 	ui.centralWidget->setLayout(ui.gridLayout);
 	ui.table->setColumnCount(5);
 	restoreGeometry();
-	manager = new CloudManager();
+	manager = new CloudManager();	//SLOW 44%
 	//stroages.push_back(new YandexDisk("yadisk"));
 	//stroages.push_back(new OneDriveManager);
  	//for(auto i : stroages)
@@ -23,7 +22,7 @@ MainCloudManager::MainCloudManager(QWidget *parent)
 	while (iter.hasNext()) {
 		auto info = iter.fileInfo();
 		if (info.isFile())
-			manager->addFile(info);
+			manager->addFile(info);		
 		iter.next();
 	}
 
@@ -35,12 +34,11 @@ MainCloudManager::MainCloudManager(QWidget *parent)
 	connect(ui.addCloud, &QPushButton::clicked, this, &MainCloudManager::addCloud);
 	connect(ui.removeCloud, &QPushButton::clicked, this, &MainCloudManager::removeCloud);
 
-	refresh();
+	refresh();		//SLOW 12%
 }
 
 MainCloudManager::~MainCloudManager()
 {
-	qInfo("MainCloudManager");
 	if (manager) delete manager;
 	saveGeometry();
 	//for (auto i : stroages)
@@ -56,11 +54,11 @@ void MainCloudManager::refresh()
 	for (auto id : cloudIDs) {
 		auto cloud = manager->getConstCloudByID(id);
 		QString serviceName = cloud->userName() + "@" + cloud->serviceName();
-		QList<LongName> files = cloud->managedFiles();
+		QSet<LongName> files = cloud->managedFiles();
 		ui.table->setRowCount(ui.table->rowCount() + files.size());
 		for (auto j : files) {
 			QTableWidgetItem *name = new QTableWidgetItem(j);
-			QTableWidgetItem *ctime = new QTableWidgetItem(cloud->lastModified(j).toString());
+			QTableWidgetItem *ctime = new QTableWidgetItem(cloud->lastModified(j).toString());		//SLOW 10%
 			QTableWidgetItem *ltime = new QTableWidgetItem(QFileInfo(j).lastModified().toString());
 			QTableWidgetItem *service = new QTableWidgetItem(serviceName);
 			ui.table->setItem(row, 0, name);
@@ -107,7 +105,7 @@ void MainCloudManager::customRequest()
 	if (!ok) return;
 	auto choosenCloud_cp = manager->getConstCloudByID(clouds[choosenCloud]);
 	auto choosenCloud_p = const_cast<AbstractCloud*>(choosenCloud_cp);
-	auto dialog = CustomRequestDialog(choosenCloud_p, this);
+	CustomRequestDialog dialog(choosenCloud_p, this);
 	dialog.show();
 	dialog.exec();
 }
@@ -115,7 +113,7 @@ void MainCloudManager::customRequest()
 void MainCloudManager::addCloud()	
 {
 	QMap<QString, CloudType> cloudTypes;
-	cloudTypes["YandexDisk"] = CloudType::YandexDisk;
+	cloudTypes["YandexDisk"] = CloudType::YandexDiskWebDav;
 	cloudTypes["Other"] = CloudType::Other;
 
 	bool ok;

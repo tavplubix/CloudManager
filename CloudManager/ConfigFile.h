@@ -52,7 +52,7 @@ class ConfigFile :		//FIXME make singleton
 	static int deviceID;
 	QSet<int> defices;
 	//QJsonArray files, removedFiles;
-	ShortNameSet managedFilesSet;// , removedFilesSet;
+	LongNameSet managedFilesSet;// , removedFilesSet;
 	//bool m_locked;
 	static const ShortName configFileName; //  = ".cloudmanager";
 public:
@@ -65,7 +65,7 @@ public:
 	void addFile(const ShortName& file);		//WARNING throws exception if file has been removed by other client device
 	void removeFile(const ShortName& file);
 	void removeFileData(const ShortName& file);
-	ShortNameSet filesInTheCloud();
+	LongNameSet filesInTheCloud();
 	class AutoLock {
 		ConfigFile * const cf;
 		ConfigFile::CaptureGuard guard;

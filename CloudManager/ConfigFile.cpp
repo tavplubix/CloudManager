@@ -18,17 +18,21 @@ void ConfigFile::update()
 {
 	if (remoteResourceCaptured) return;
 	//if (m_locked) return; //WARNING
-	QJsonObject configJSON = getConfigJSON();
+	QJsonObject configJSON = getConfigJSON();	//OPTIMIZE 509ms
+	QByteArray jsonstring = QJsonDocument(configJSON).toJson();	//dbg
 	if (!configJSON.contains("managedFiles") && !configJSON["managedFiles"].isArray())  invalidConfig();
 	//if (!configJSON.contains("removedFiles") && !configJSON["removedFiles"].isArray())  invalidConfig();
-	QJsonArray tmp;
+	//QJsonArray tmp;
 	//tmp = configJSON["removedFiles"].toArray();
 	//ShortNameSet rmed;
 	//for (auto i : tmp) rmed.insert(i.toString());
 	//removedFilesSet += rmed;
-	tmp = configJSON["managedFiles"].toArray();
-	ShortNameSet f;
-	for (auto i : tmp) f.insert(i.toString());
+	QJsonArray tmp = configJSON["managedFiles"].toArray();
+	LongNameSet f;
+	for (auto i : tmp) {
+		QString tempstring = i.toString();	//dbg
+		f.insert(i.toString());	//OPTIMIZE 830ms
+	}
 	managedFilesSet += f;	
 	//managedFilesSet -= removedFilesSet;
 }
@@ -36,7 +40,7 @@ void ConfigFile::update()
 void ConfigFile::saveChanges()
 {
 	QJsonArray newManagedFiles;
-	for (auto i : managedFilesSet) newManagedFiles.append((QString)i);
+	for (auto i : managedFilesSet) newManagedFiles.append(QString(ShortName(i)));
 	QJsonObject confObj;
 	confObj.insert("managedFiles", newManagedFiles);
 	QByteArray configFile = QJsonDocument(confObj).toJson();
@@ -48,7 +52,6 @@ void ConfigFile::saveChanges()
 ConfigFile::ConfigFile(AbstractCloud* cloud)
 	: cloud(cloud), remoteResourceCaptured(false), remoteResourceRequired(false), guards(0), mutex(QMutex::Recursive)
 {
-	qInfo("ConfigFile()");
 	uncapturingTimer.setSingleShot(true);
 	uncapturingTimer.setInterval(defaultUncapturingTimeout);
 	update();
@@ -123,7 +126,7 @@ void ConfigFile::removeFileData(const ShortName& file)	//UNDONE removeFileData()
 	//throw NotImplemented();
 }
 
-ShortNameSet ConfigFile::filesInTheCloud() 
+LongNameSet ConfigFile::filesInTheCloud()
 {
 	update();
 	return managedFilesSet;
@@ -147,7 +150,6 @@ QJsonObject ConfigFile::getConfigJSON()
 
 ConfigFile::~ConfigFile()
 {
-	qInfo("~ConfigFile()");
 	if (remoteResourceCaptured) {
 		saveChanges();
 		cloud->waitFor(cloud->unlockFile(configFileName));

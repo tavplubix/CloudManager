@@ -33,6 +33,16 @@
       <Extensions>cpp;moc</Extensions>
       <SourceControlFiles>False</SourceControlFiles>
     </Filter>
+    <Filter Include="Generated Files\Profiling">
+      <UniqueIdentifier>{0059eedd-c02b-49e3-8166-2e7af0e92322}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
+    <Filter Include="Generated Files\SSL Debug">
+      <UniqueIdentifier>{5288af47-3c38-4fa7-96eb-b4dab78b2872}</UniqueIdentifier>
+      <Extensions>cpp;moc</Extensions>
+      <SourceControlFiles>False</SourceControlFiles>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -40,12 +50,6 @@
     </ClCompile>
     <ClCompile Include="maincloudmanager.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_maincloudmanager.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_maincloudmanager.cpp">
-      <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="GeneratedFiles\qrc_maincloudmanager.cpp">
       <Filter>Generated Files</Filter>
@@ -56,29 +60,11 @@
     <ClCompile Include="ConfigFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_ConfigFile.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_ConfigFile.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="CustomRequestDialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_CustomRequestDialog.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_CustomRequestDialog.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="AbstractCloud.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Debug\moc_AbstractCloud.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="GeneratedFiles\Release\moc_AbstractCloud.cpp">
-      <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="CloudManager.cpp">
       <Filter>Source Files</Filter>
@@ -91,6 +77,81 @@
     </ClCompile>
     <ClCompile Include="GeneratedFiles\Release\moc_YandexDisk.cpp">
       <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Profiling\moc_YandexDisk.cpp">
+      <Filter>Generated Files\Profiling</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_maincloudmanager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_maincloudmanager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Profiling\moc_maincloudmanager.cpp">
+      <Filter>Generated Files\Profiling</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_CustomRequestDialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_CustomRequestDialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Profiling\moc_CustomRequestDialog.cpp">
+      <Filter>Generated Files\Profiling</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_ConfigFile.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_ConfigFile.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Profiling\moc_ConfigFile.cpp">
+      <Filter>Generated Files\Profiling</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_AbstractCloud.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_AbstractCloud.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Profiling\moc_AbstractCloud.cpp">
+      <Filter>Generated Files\Profiling</Filter>
+    </ClCompile>
+    <ClCompile Include="OAuth.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NetworkExceptions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_OAuth.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_OAuth.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\SSL Debug\moc_OAuth.cpp">
+      <Filter>Generated Files\SSL Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Profiling\moc_OAuth.cpp">
+      <Filter>Generated Files\Profiling</Filter>
+    </ClCompile>
+    <ClCompile Include="RequestManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="File.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_RequestManager.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_RequestManager.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\SSL Debug\moc_RequestManager.cpp">
+      <Filter>Generated Files\SSL Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Profiling\moc_RequestManager.cpp">
+      <Filter>Generated Files\Profiling</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -118,6 +179,12 @@
     <CustomBuild Include="YandexDisk.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="OAuth.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="RequestManager.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GeneratedFiles\ui_maincloudmanager.h">
@@ -133,6 +200,15 @@
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="CloudManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkExceptions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="File.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
