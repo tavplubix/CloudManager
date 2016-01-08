@@ -136,7 +136,11 @@ QJsonObject ConfigFile::getConfigJSON()
 {
 	ShortNameSet remote;
 	QSharedPointer<QBuffer> configBuf(new QBuffer);
-	cloud->waitFor(cloud->downloadFile(configFileName, configBuf));
+	try {
+		cloud->waitFor(cloud->downloadFile(configFileName, configBuf));
+	}
+	catch (...) {
+	}
 	if (configBuf->bytesAvailable() == 0) {
 		//TODO нужна отдельная функция для случая, когда манагер запущен впервые
 		qDebug() << "WARNING: config JSON is empty\n";

@@ -113,7 +113,8 @@ void MainCloudManager::customRequest()
 void MainCloudManager::addCloud()	
 {
 	QMap<QString, CloudType> cloudTypes;
-	cloudTypes["YandexDisk"] = CloudType::YandexDiskWebDav;
+	cloudTypes["YandexDiskWebDav [DEPRECATED]"] = CloudType::YandexDiskWebDav;
+	cloudTypes["YandexDiskREST"] = CloudType::YandexDiskREST;
 	cloudTypes["Other"] = CloudType::Other;
 
 	bool ok;

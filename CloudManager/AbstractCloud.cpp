@@ -190,6 +190,7 @@ void AbstractCloud::removeFileData(QFileInfo file)
 
 AbstractCloud::~AbstractCloud()
 {
+	delete config;
 	//settings->beginGroup(managerID());
 	//settings->setValue("managedFiles", QVariant::fromValue(localFiles));
 	//settings->endGroup();

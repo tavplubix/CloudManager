@@ -153,6 +153,21 @@
     <ClCompile Include="GeneratedFiles\Profiling\moc_RequestManager.cpp">
       <Filter>Generated Files\Profiling</Filter>
     </ClCompile>
+    <ClCompile Include="YandexDiskREST.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Debug\moc_YandexDiskREST.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Release\moc_YandexDiskREST.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\SSL Debug\moc_YandexDiskREST.cpp">
+      <Filter>Generated Files\SSL Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneratedFiles\Profiling\moc_YandexDiskREST.cpp">
+      <Filter>Generated Files\Profiling</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="maincloudmanager.h">
@@ -183,6 +198,9 @@
       <Filter>Header Files</Filter>
     </CustomBuild>
     <CustomBuild Include="RequestManager.h">
+      <Filter>Header Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="YandexDiskREST.h">
       <Filter>Header Files</Filter>
     </CustomBuild>
   </ItemGroup>

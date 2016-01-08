@@ -88,15 +88,15 @@ public methods:
 	RequestID POST(const QNetworkRequest& req, const QByteArray& body);
 	RequestID POST(const QNetworkRequest& req, const QJsonObject& body);
 	RequestID POST(const QNetworkRequest& req, const File& body);
-	//RequestID POST(const QNetworkRequest& req, QIODevice* body);
+	RequestID POST(const QNetworkRequest& req, QIODevice* body);
 		   
 	RequestID PUT(const QNetworkRequest& req, const QByteArray& body);
 	RequestID PUT(const QNetworkRequest& req, const QJsonObject& body);
 	RequestID PUT(const QNetworkRequest& req, const File& body);
-	//RequestID PUT(const QNetworkRequest& req, QIODevice* body);
+	RequestID PUT(const QNetworkRequest& req, QIODevice* body);
 
 
-
+	QNetworkReply* __CRUTCH__get_QNetworkReply_object_by_RequestID__(RequestID id);
 
 };
 

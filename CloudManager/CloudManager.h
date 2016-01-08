@@ -4,8 +4,9 @@
 #include "CommonIncludes.h"
 #include "AbstractCloud.h"
 #include "YandexDisk.h"
+#include "YandexDiskREST.h"
 
-enum class CloudType : int { YandexDiskWebDav, YandexDiskREST, Other };
+enum class CloudType : int { YandexDiskWebDav = 2, YandexDiskREST = 1, Other};
 typedef QList<AbstractCloud> CloudList;
 typedef int CloudID;
 typedef QList<CloudID> CloudIDList;

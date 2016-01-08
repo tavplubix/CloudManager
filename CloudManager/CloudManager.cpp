@@ -8,6 +8,9 @@ AbstractCloud* CloudManager::createCloud(CloudType type, const QString& qsetting
 	case CloudType::YandexDiskWebDav:
 		newCloud = new YandexDiskWebDav(qsettingsGroup);
 		break;
+	case CloudType::YandexDiskREST:
+		newCloud = new YandexDiskREST(qsettingsGroup);
+		break;
 	default:
 		qDebug() << "\n\nERROR: CloudManager::createCloud(): unknown cloudType: cloud wasn't created\n\n";
 		return nullptr;
@@ -19,7 +22,7 @@ AbstractCloud* CloudManager::createCloud(CloudType type, const QString& qsetting
 CloudType CloudManager::getCloudType(AbstractCloud* cloud)
 {
 	QByteArray className = cloud->metaObject()->className();
-	if (className == "YandexDisk") return CloudType::YandexDiskWebDav;
+	if (className == "YandexDiskWebDav") return CloudType::YandexDiskWebDav;
 	//else if (className == smth) return CloudType::smth;
 	else return CloudType::Other;
 }
@@ -44,10 +47,10 @@ CloudManager::CloudManager()
 
 CloudID CloudManager::addCloud(CloudType type)
 {
-
+	srand(time(nullptr));
 	CloudID newID;
 	do {
-		newID = qrand();
+		newID = rand() % 128;
 	} while (clouds.contains(newID) || newID == 0);	//OPTIMIZE
 	QString qsettingsGroup = "CloudGroup" + QString::number(newID);
 	AbstractCloud* newCloud = createCloud(type, qsettingsGroup);

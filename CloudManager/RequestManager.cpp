@@ -85,6 +85,12 @@ RequestID RequestManager::POST(const QNetworkRequest & req, const QJsonObject & 
 	auto qba_body = QJsonDocument(body).toJson();
 	return POST(req, qba_body);
 }
+RequestID RequestManager::POST(const QNetworkRequest & req, QIODevice * body)
+{
+	body->open(QIODevice::ReadOnly);
+	auto reply = post(req, body);
+	return newRequest(reply, body);
+}
 //RequestID RequestManager::POST(const QNetworkRequest & req, const File & body)
 //{
 //	auto f = new QFile(body.localPath());
@@ -105,6 +111,16 @@ RequestID RequestManager::PUT(const QNetworkRequest & req, const QJsonObject & b
 {
 	auto qba_body = QJsonDocument(body).toJson();
 	return PUT(req, qba_body);
+}
+RequestID RequestManager::PUT(const QNetworkRequest & req, QIODevice * body)
+{
+	body->open(QIODevice::ReadOnly);
+	auto reply = put(req, body);
+	return newRequest(reply, body);
+}
+QNetworkReply * RequestManager::__CRUTCH__get_QNetworkReply_object_by_RequestID__(RequestID id)
+{
+	return getRequestByID(id)->m_reply;
 }
 //RequestID RequestManager::PUT(const QNetworkRequest & req, const File & body)
 //{
@@ -136,8 +152,10 @@ Request::~Request()
 {
 	if (m_reply)
 		delete m_reply;
-	if (m_body)
+	if (m_body) {
+		m_body->close();
 		delete m_body;
+	}
 }
 
 void Request::setReply(QNetworkReply* reply)

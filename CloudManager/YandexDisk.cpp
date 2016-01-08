@@ -27,20 +27,7 @@ YandexDiskWebDav::YandexDiskWebDav(QString qsettingsGroup)
 	//есть смысл делать всё асинхронно
 	//WARNING add SSL errors handler
 	//disk.setProxy(QNetworkProxy(QNetworkProxy::HttpProxy, "127.0.0.1", 8888));
-	auto tmpdir = QDir::temp().absolutePath();
-	auto conf = QSslConfiguration::defaultConfiguration();
-	conf.setPrivateKey(QSslKey());
-	conf.setProtocol(QSsl::SslV3);
-	//auto pk_pem = conf.privateKey().toPem();
-	disk.connectToHostEncrypted("https://webdav.yandex.ru/");		//SLOW 39%
-
-	
-	auto pk_pem = conf.privateKey().toPem();
-	QFile f("privkey.base64");
-	f.open(QIODevice::WriteOnly);
-	f.write(pk_pem);
-	f.close();
-
+	disk.connectToHostEncrypted("https://webdav.yandex.ru/");		//SLOW 39
 }
 
 YandexDiskWebDav::~YandexDiskWebDav()
@@ -92,7 +79,7 @@ qint64 YandexDiskWebDav::m_spaceAvailable()	const
 // xmpp _СЛИШКОМ_ ебаный, лучше ВРЕМЕННО закостылять первым способом
 {
 	QNetworkRequest request(QUrl("https://webdav.yandex.ru/"));
-	request.setRawHeader("AUthorization", authorizationHeader);
+	request.setRawHeader("Authorization", authorizationHeader);
 	request.setRawHeader("Depth", "0");
 	QByteArray body = "<propfind xmlns=\"DAV:\"> <prop> <quota-available-bytes/> <quota-used-bytes/> </prop> </propfind>";
 	QBuffer *buf = new QBuffer;
@@ -339,48 +326,6 @@ ReplyID YandexDiskWebDav::remove(const ShortName& name)
 
 QByteArray YandexDiskWebDav::sendDebugRequest(QByteArray requestType, QString url, QByteArray body, QList<QNetworkReply::RawHeaderPair> additionalHeaders)
 {
-	RequestManager rm(url);
-	QNetworkRequest request(url);
-	for (auto &header : additionalHeaders)
-		request.setRawHeader(header.first, header.second);
-	if (!request.hasRawHeader("Authorization"))
-		request.setRawHeader("Authorization", authorizationHeader);
-
-	QByteArray log;
-	log += "\n======================== REQUEST =========================\n";
-	log += requestType + "  " + request.url().toString().toLocal8Bit() + "\n";
-	QList<QByteArray> headers = request.rawHeaderList();
-	for (auto i : headers) log += i + ": " + request.rawHeader(i) + "\n";
-	log += "BODY:\n";
-	log += body;
-	log += "\n==========================================================\n";
-
-	RequestID reqID;
-	requestType = requestType.toUpper();
-	if (requestType == "HEAD")			reqID = rm.HEAD(request);	//CRUTCH this crutch makes it works
-	else if (requestType == "GET")		reqID = rm.GET(request);
-	else if (requestType == "PUT")		reqID = rm.PUT(request, body);
-	else if (requestType == "POST")		reqID = rm.POST(request, body);
-	else if (requestType == "DELETE")	reqID = rm.DELETE(request);
-	else {
-		return QByteArray();
-	}
-	
-	rm.waitForResponseReady(reqID);
-
-	Request* req = rm.getRequestByID(reqID);
-	log += "\n======================= RESPONSE =========================\n";
-	int code = req->httpStatusCode();
-	log += "Status code: " + QString::number(code).toLocal8Bit() + "\n";
-	auto respheaders = req->responseHeaders();
-	for (auto i : respheaders) log += (i.first + ": " + i.second + "\n");
-	log += "BODY:\n";
-	log += req->responseBody().left(1024);
-
-	return log;
-
-
-	/*
 	QNetworkRequest request(url);
 	for (auto &header : additionalHeaders)
 		request.setRawHeader(header.first, header.second);
@@ -410,6 +355,6 @@ QByteArray YandexDiskWebDav::sendDebugRequest(QByteArray requestType, QString ur
 	netLog(reply, &logBuf);
 	delete reply;
 	return logBuf.data();
-	*/
+	
 }
 
