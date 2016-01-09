@@ -8,6 +8,10 @@
 #include <QUrl>
 #include <memory>
 
+
+#include "RequestManager.h"
+
+
 #define DEBUG 1
 #define NETLOG 0
 
@@ -47,7 +51,7 @@ private:
 	ConfigFile *config;
 	QTimer timer300s;
 	//===================== Private Methods ===========================
-	ReplyID downloadFile(const ShortName& name, QIODevice* file) { QSharedPointer<QIODevice> tmp(file);  return downloadFile(name, tmp); }
+	Request downloadFile(const ShortName& name, QIODevice* file) { QSharedPointer<QIODevice> tmp(file);  return downloadFile(name, tmp); }
 protected:
 	//===================== Protected Fields ==========================
 	AbstractCloud::Status m_status;
@@ -66,14 +70,14 @@ protected:
 //	QSet<ReplyID> allReplies() const { return replies; }
 	//============== Pure Virtual Prorected Methods ===================
 	virtual bool authorized() const = 0;
-	virtual ReplyID authorize() = 0;
-	virtual ReplyID downloadFile(const ShortName& name, QSharedPointer<QIODevice> file) = 0;
-	virtual ReplyID uploadFile(const ShortName& name, QIODevice* file) = 0;		//становится влдельцем QIODevice* file
-	virtual ReplyID remove(const ShortName& name) = 0;
+	virtual Request authorize() = 0;
+	virtual Request downloadFile(const ShortName& name, QSharedPointer<QIODevice> file) = 0;
+	virtual Request uploadFile(const ShortName& name, QIODevice* file) = 0;		//становится влдельцем QIODevice* file
+	virtual Request remove(const ShortName& name) = 0;
 	virtual qint64 m_spaceAvailable() const = 0;		//in bites
 	//блокировать один файл или весть сервис целиком? (блокировка файла конфигурации == блокировка сервиса)
-	virtual ReplyID lockFile(const ShortName& name /*= configFileName*/) { qDebug() << "WARNING: lockFile() is not implemented\n"; return nullptr; }
-	virtual ReplyID unlockFile(const ShortName& name /*= configFileName*/) { qDebug() << "WARNING: unlockFile() is not implemented\n"; return nullptr; }
+	virtual Request lockFile(const ShortName& name /*= configFileName*/) { qDebug() << "WARNING: lockFile() is not implemented\n"; return nullptr; }
+	virtual Request unlockFile(const ShortName& name /*= configFileName*/) { qDebug() << "WARNING: unlockFile() is not implemented\n"; return nullptr; }
 	virtual bool fileLocked(const ShortName& name /*= configFileName*/) const { qDebug() << "WARNING: fileLocked() is not implemented\n"; return false; }
 	//virtual QString managerID() const = 0;		//костыль 
 public:

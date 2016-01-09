@@ -93,7 +93,7 @@ AbstractCloud::AbstractCloud(QString qsettingsGroup)
 void AbstractCloud::init()
 {
 	if (!authorized()) 
-		waitFor( authorize() );
+		authorize()->waitForResponseReady();
 	config = new ConfigFile(this);
 	spaceAvailableCache = m_spaceAvailable();
 	//settings->beginGroup(managerID());

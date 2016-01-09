@@ -9,7 +9,7 @@
 #define checkForHTTPErrors(x) _checkForHTTPErrors(x, __FILE__, __LINE__, QT_MESSAGELOG_FUNC); 
 #define HTTPstatus(reply) reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt()
 
-class YandexDiskWebDav :
+class __declspec(deprecated) YandexDiskWebDav :
 	//public WebDAVManager
 	public AbstractCloud
 {
@@ -32,12 +32,12 @@ private:
 protected:
 	//======================== Virtual Protected Methods =========================
 	bool authorized() const override final;
-	ReplyID authorize() override final;
+	Request authorize() override final;
 	//QString managerID() const override { return "42"; };
 	qint64 m_spaceAvailable() const override final;
-	ReplyID downloadFile(const ShortName& name, QSharedPointer<QIODevice> file) override final;
-	ReplyID uploadFile(const ShortName& name, QIODevice* file) override final;
-	ReplyID remove(const ShortName& name) override final;
+	Request downloadFile(const ShortName& name, QSharedPointer<QIODevice> file) override final;
+	Request uploadFile(const ShortName& name, QIODevice* file) override final;
+	Request remove(const ShortName& name) override final;
 	virtual void mkdir(ShortName dir);
 public:
 	//=========================== Public Methods =================================

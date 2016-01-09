@@ -12,14 +12,16 @@
 
 
 
-RequestID RequestManager::newRequest(QNetworkReply* reply, QIODevice* body /*= nullptr*/)
+
+
+Request RequestManager::newRequest(QNetworkReply* reply, QIODevice* body /*= nullptr*/)
 {
-	auto r = new Request;
+	auto r = new RequestPrivate;
 	if (body) r->setBody(body);
 	r->setReply(reply);
 	r->m_id = ++lastID;
 	requestMap[lastID] = r;
-	return r->m_id;
+	return r;
 }
 
 RequestManager::RequestManager(const QUrl& host, bool encryped /*= true*/, QObject* parent /*= nullptr*/)
@@ -34,7 +36,7 @@ RequestManager::RequestManager(const QUrl& host, bool encryped /*= true*/, QObje
 
 
 
-Request * RequestManager::getRequestByID(RequestID id) const
+RequestPrivate * RequestManager::getRequestByID(RequestID id) const
 {
 	if (requestMap.contains(id))
 		return requestMap[id];
@@ -42,29 +44,28 @@ Request * RequestManager::getRequestByID(RequestID id) const
 		return nullptr;
 }
 
-void RequestManager::waitForResponseReady(RequestID id) const
+void RequestManager::waitForResponseReady(const Request& request) const
 {
-	auto request = getRequestByID(id);
-	if (request->status() == Request::Status::ResponseReady)
+	if (request->status() == RequestPrivate::Status::ResponseReady)
 		return;
-	if (request->status() == Request::Status::Finished)
+	if (request->status() == RequestPrivate::Status::Finished)
 		return;		//TODO throw
 	QEventLoop loop;
-	connect(request, &Request::responseReady, &loop, &QEventLoop::quit);
+	connect(request, &RequestPrivate::responseReady, &loop, &QEventLoop::quit);
 	loop.exec();
 }
 
-RequestID RequestManager::HEAD(const QNetworkRequest & req)
+Request RequestManager::HEAD(const QNetworkRequest & req)
 {
 	auto reply = head(req);
 	return newRequest(reply);
 }
-RequestID RequestManager::GET(const QNetworkRequest & req)
+Request RequestManager::GET(const QNetworkRequest & req)
 {
 	auto reply = get(req);
 	return newRequest(reply);
 }
-RequestID RequestManager::DELETE(const QNetworkRequest & req)
+Request RequestManager::DELETE(const QNetworkRequest & req)
 {
 	auto reply = deleteResource(req);
 	return newRequest(reply);
@@ -72,7 +73,7 @@ RequestID RequestManager::DELETE(const QNetworkRequest & req)
 
 
 
-RequestID RequestManager::POST(const QNetworkRequest & req, const QByteArray & body)
+Request RequestManager::POST(const QNetworkRequest & req, const QByteArray & body)
 {
 	auto buf = new QBuffer;
 	buf->setData(body);
@@ -80,18 +81,18 @@ RequestID RequestManager::POST(const QNetworkRequest & req, const QByteArray & b
 	auto reply = post(req, buf);
 	return newRequest(reply, buf);
 }
-RequestID RequestManager::POST(const QNetworkRequest & req, const QJsonObject & body)
+Request RequestManager::POST(const QNetworkRequest & req, const QJsonObject & body)
 {
 	auto qba_body = QJsonDocument(body).toJson();
 	return POST(req, qba_body);
 }
-RequestID RequestManager::POST(const QNetworkRequest & req, QIODevice * body)
+Request RequestManager::POST(const QNetworkRequest & req, QIODevice * body)
 {
 	body->open(QIODevice::ReadOnly);
 	auto reply = post(req, body);
 	return newRequest(reply, body);
 }
-//RequestID RequestManager::POST(const QNetworkRequest & req, const File & body)
+//Request RequestManager::POST(const QNetworkRequest & req, const File & body)
 //{
 //	auto f = new QFile(body.localPath());
 //	auto reply = post(req, f);
@@ -99,7 +100,7 @@ RequestID RequestManager::POST(const QNetworkRequest & req, QIODevice * body)
 //}
 
 
-RequestID RequestManager::PUT(const QNetworkRequest & req, const QByteArray & body)
+Request RequestManager::PUT(const QNetworkRequest & req, const QByteArray & body)
 {
 	auto buf = new QBuffer;
 	buf->setData(body);
@@ -107,22 +108,18 @@ RequestID RequestManager::PUT(const QNetworkRequest & req, const QByteArray & bo
 	auto reply = put(req, buf);
 	return newRequest(reply, buf);
 }
-RequestID RequestManager::PUT(const QNetworkRequest & req, const QJsonObject & body)
+Request RequestManager::PUT(const QNetworkRequest & req, const QJsonObject & body)
 {
 	auto qba_body = QJsonDocument(body).toJson();
 	return PUT(req, qba_body);
 }
-RequestID RequestManager::PUT(const QNetworkRequest & req, QIODevice * body)
+Request RequestManager::PUT(const QNetworkRequest & req, QIODevice * body)
 {
 	body->open(QIODevice::ReadOnly);
 	auto reply = put(req, body);
 	return newRequest(reply, body);
 }
-QNetworkReply * RequestManager::__CRUTCH__get_QNetworkReply_object_by_RequestID__(RequestID id)
-{
-	return getRequestByID(id)->m_reply;
-}
-//RequestID RequestManager::PUT(const QNetworkRequest & req, const File & body)
+//Request RequestManager::PUT(const QNetworkRequest & req, const File & body)
 //{
 //	auto f = new QFile(body.localPath());
 //	auto reply = put(req, f);
@@ -130,6 +127,20 @@ QNetworkReply * RequestManager::__CRUTCH__get_QNetworkReply_object_by_RequestID_
 //}
 
 
+[[deprecated("You better DO NOT use this method")]]
+const QNetworkReply * RequestManager::__CRUTCH__get_QNetworkReply_object_by_Request__(Request& r) const
+{
+	return r->m_reply;
+}
+[[deprecated("warning: converting object of deprecated ReplyID to object of new class Request")]]
+Request RequestManager::fromDeprecatedID(const RequestManager::ReplyID rid)
+{
+	Request r = new RequestPrivate;
+	r->setReply(rid);
+	r->m_id = 0;
+	connect(rid, &QNetworkReply::destroyed, r, &RequestPrivate::deleteLater);	//WARNING
+	return r;
+}
 
 
 
@@ -139,7 +150,11 @@ QNetworkReply * RequestManager::__CRUTCH__get_QNetworkReply_object_by_RequestID_
 
 
 
-Request::Request(QObject* parent /*= nullptr*/)
+
+
+
+
+RequestPrivate::RequestPrivate(QObject* parent /*= nullptr*/)
 	: QObject(parent)
 {
 	m_id = 0;
@@ -148,9 +163,9 @@ Request::Request(QObject* parent /*= nullptr*/)
 	m_status = Status::Empty;
 }
 
-Request::~Request()
+RequestPrivate::~RequestPrivate()
 {
-	if (m_reply)
+	if (m_reply && m_id)
 		delete m_reply;
 	if (m_body) {
 		m_body->close();
@@ -158,16 +173,16 @@ Request::~Request()
 	}
 }
 
-void Request::setReply(QNetworkReply* reply)
+void RequestPrivate::setReply(QNetworkReply* reply)
 {
 	if (m_reply)
 		delete m_reply;		//WARNING
 	m_reply = reply;
 	m_status = Status::InProcess;
-	connect(m_reply, &QNetworkReply::finished, this, &Request::finishedSlot);
+	connect(m_reply, &QNetworkReply::finished, this, &RequestPrivate::finishedSlot);
 }
 
-void Request::setBody(QIODevice * body)
+void RequestPrivate::setBody(QIODevice * body)
 {	
 	//m_body must remain valid until m_reply is finished
 	if (m_reply) 
@@ -179,17 +194,18 @@ void Request::setBody(QIODevice * body)
 	m_body = body;
 }
 
-//void Request::waitForResponseReady() const
-//{
-//	if (m_status == Status::ResponseReady)
-//		return;
-//	if (m_status == Status::Finished)
-//		return;
-//	QEventLoop loop;
-//
-//}
+void RequestPrivate::waitForResponseReady() const
+{
+	if (m_status == Status::ResponseReady)
+		return;
+	if (m_status == Status::Finished)
+		return;
+	QEventLoop loop;
+	connect(this, &RequestPrivate::responseReady, &loop, &QEventLoop::quit);
+	loop.exec();
+}
 
-HeaderList Request::responseHeaders() const
+HeaderList RequestPrivate::responseHeaders() const
 {
 	if (m_status != Status::ResponseReady)
 		return HeaderList();	//TODO throw
@@ -197,7 +213,7 @@ HeaderList Request::responseHeaders() const
 		return m_reply->rawHeaderPairs();
 }
 
-QByteArray Request::responseBody() const
+QByteArray RequestPrivate::responseBody() const
 {
 	if (m_status != Status::ResponseReady)
 		return QByteArray();	//TODO throw
@@ -205,14 +221,15 @@ QByteArray Request::responseBody() const
 		return m_reply->readAll();
 }
 
-int Request::httpStatusCode()
+int RequestPrivate::httpStatusCode()
 {
 	return m_reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();	//WARNING
 }
 
-void Request::finishedSlot()
+void RequestPrivate::finishedSlot()
 {
 	m_status = Status::ResponseReady;
 	emit responseReady();
 }
+
 

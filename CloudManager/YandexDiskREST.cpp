@@ -21,7 +21,7 @@ bool YandexDiskREST::authorized() const
 	return true;
 }
 
-ReplyID YandexDiskREST::authorize()
+Request YandexDiskREST::authorize()
 {
 	if (authorized()) return nullptr;
 	OAuthClientInfo client(appID, clientSecret);
@@ -51,9 +51,8 @@ qint64 YandexDiskREST::m_spaceAvailable() const
 {
 	QNetworkRequest req(apiURL);
 	req.setRawHeader("Authorization", authorizationHeader);
-	RequestID id = api.GET(req);
-	api.waitForResponseReady(id);
-	Request* r = api.getRequestByID(id);
+	Request r = api.GET(req);
+	api.waitForResponseReady(r);
 	if (r->httpStatusCode() != 200)
 		throw new UnexpectedHttpStatusCode(r->httpStatusCode());
 	QJsonObject diskInfo = QJsonDocument::fromJson(r->responseBody()).object();
@@ -64,53 +63,49 @@ qint64 YandexDiskREST::m_spaceAvailable() const
 
 
 
-ReplyID YandexDiskREST::downloadFile(const ShortName& name, QSharedPointer<QIODevice> file)
+Request YandexDiskREST::downloadFile(const ShortName& name, QSharedPointer<QIODevice> file)
 {
 	QNetworkRequest req(apiURL + "resources/download?path=" + name);
 	req.setRawHeader("Authorization", authorizationHeader);
-	RequestID id = api.GET(req);
-	api.waitForResponseReady(id);
-	Request* r = api.getRequestByID(id);
+	Request r = api.GET(req);
+	api.waitForResponseReady(r);
 	if (r->httpStatusCode() != 200)
 		throw new UnexpectedHttpStatusCode(r->httpStatusCode());
 	QJsonObject downloadingInfo = QJsonDocument::fromJson(r->responseBody()).object();
 	QUrl href = downloadingInfo["href"].toString();
 
-	id = disk.GET(QNetworkRequest(href));
-	auto dr = disk.getRequestByID(id);
-	connect(dr, &Request::responseReady, [&]() {
+	r = disk.GET(QNetworkRequest(href));
+	connect(r, &RequestPrivate::responseReady, [&]() {
 		file->open(QIODevice::WriteOnly);
-		file->write(dr->responseBody());
+		file->write(r->responseBody());
 	});
 
-	return disk.__CRUTCH__get_QNetworkReply_object_by_RequestID__(id);
+	return r;
 }
 
-ReplyID YandexDiskREST::uploadFile(const ShortName& name, QIODevice* file)
+Request YandexDiskREST::uploadFile(const ShortName& name, QIODevice* file)
 {
 	QNetworkRequest req(apiURL + "resources/upload?overwrite=true&path=" + name);
 	req.setRawHeader("Authorization", authorizationHeader);
-	RequestID id = api.GET(req);
-	api.waitForResponseReady(id);
-	Request* r = api.getRequestByID(id);
+	Request r = api.GET(req);
+	api.waitForResponseReady(r);
 	if (r->httpStatusCode() != 200)
 		throw new UnexpectedHttpStatusCode(r->httpStatusCode());
 	QJsonObject uploadingInfo = QJsonDocument::fromJson(r->responseBody()).object();
 	QUrl href = uploadingInfo["href"].toString();
 
-	id = disk.PUT(QNetworkRequest(href), file);
-	return disk.__CRUTCH__get_QNetworkReply_object_by_RequestID__(id);
+	r = disk.PUT(QNetworkRequest(href), file);
+	return r;
 }
 
 
 
-ReplyID YandexDiskREST::remove(const ShortName& name)
+Request YandexDiskREST::remove(const ShortName& name)
 {
 	QNetworkRequest req(apiURL + "resources?permanently=true&path=" + name);
 	req.setRawHeader("Authorization", authorizationHeader);
-	RequestID id = api.GET(req);
-	api.waitForResponseReady(id);
-	Request* r = api.getRequestByID(id);
+	Request r = api.GET(req);
+	api.waitForResponseReady(r);
 	if (r->httpStatusCode() == 204)
 		return nullptr;
 	else if (r->httpStatusCode() == 202) {
@@ -124,9 +119,8 @@ void YandexDiskREST::mkdir(const QString& dir)
 {
 	QNetworkRequest req(apiURL + "resources/?path=" + dir);
 	req.setRawHeader("Authorization", authorizationHeader);
-	RequestID id = api.GET(req);
-	api.waitForResponseReady(id);
-	Request* r = api.getRequestByID(id);
+	Request r = api.GET(req);
+	api.waitForResponseReady(r);
 	if (r->httpStatusCode() != 201)
 		throw new UnexpectedHttpStatusCode(r->httpStatusCode());
 }
@@ -160,9 +154,8 @@ QDateTime YandexDiskREST::lastModified(const ShortName& name) const
 {
 	QNetworkRequest req(apiURL + "resources/?fields=modified&path=" + name);
 	req.setRawHeader("Authorization", authorizationHeader);
-	RequestID id = api.GET(req);
-	api.waitForResponseReady(id);
-	Request* r = api.getRequestByID(id);
+	Request r = api.GET(req);
+	api.waitForResponseReady(r);
 	if (r->httpStatusCode() != 201)
 		throw new UnexpectedHttpStatusCode(r->httpStatusCode());
 	QJsonObject fileInfo = QJsonDocument::fromJson(r->responseBody()).object();
@@ -174,9 +167,8 @@ QByteArray YandexDiskREST::remoteMD5FileHash(const ShortName& filename) const
 {
 	QNetworkRequest req(apiURL + "resources/?fields=md5&path=" + filename);
 	req.setRawHeader("Authorization", authorizationHeader);
-	RequestID id = api.GET(req);
-	api.waitForResponseReady(id);
-	Request* r = api.getRequestByID(id);
+	Request r = api.GET(req);
+	api.waitForResponseReady(r);
 	if (r->httpStatusCode() != 201)
 		throw new UnexpectedHttpStatusCode(r->httpStatusCode());
 	QJsonObject fileInfo = QJsonDocument::fromJson(r->responseBody()).object();
@@ -191,9 +183,8 @@ QString YandexDiskREST::userName() const
 	RequestManager login(userInfoUrl);
 	QNetworkRequest req(userInfoUrl);
 	req.setRawHeader("Authorization", authorizationHeader);
-	RequestID id = api.GET(req);
-	api.waitForResponseReady(id);
-	Request* r = api.getRequestByID(id);
+	Request r = api.GET(req);
+	api.waitForResponseReady(r);
 	if (r->httpStatusCode() != 200)
 		throw new UnexpectedHttpStatusCode(r->httpStatusCode());
 	QJsonObject userInfo = QJsonDocument::fromJson(r->responseBody()).object();
@@ -220,20 +211,19 @@ QByteArray YandexDiskREST::sendDebugRequest(QByteArray requestType, QString url,
 	log += body;
 	log += "\n==========================================================\n";
 
-	RequestID reqID;
+	Request req;
 	requestType = requestType.toUpper();
-	if (requestType == "HEAD")			reqID = rm.HEAD(request);	//CRUTCH this crutch makes it works
-	else if (requestType == "GET")		reqID = rm.GET(request);
-	else if (requestType == "PUT")		reqID = rm.PUT(request, body);
-	else if (requestType == "POST")		reqID = rm.POST(request, body);
-	else if (requestType == "DELETE")	reqID = rm.DELETE(request);
+	if (requestType == "HEAD")			req = rm.HEAD(request);	//CRUTCH this crutch makes it works
+	else if (requestType == "GET")		req = rm.GET(request);
+	else if (requestType == "PUT")		req = rm.PUT(request, body);
+	else if (requestType == "POST")		req = rm.POST(request, body);
+	else if (requestType == "DELETE")	req = rm.DELETE(request);
 	else {
 		return QByteArray();
 	}
 
-	rm.waitForResponseReady(reqID);
+	rm.waitForResponseReady(req);
 
-	Request* req = rm.getRequestByID(reqID);
 	log += "\n======================= RESPONSE =========================\n";
 	int code = req->httpStatusCode();
 	log += "Status code: " + QString::number(code).toLocal8Bit() + "\n";

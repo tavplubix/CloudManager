@@ -29,17 +29,17 @@ void CustomRequestDialog::send()
 	}
 	else if (method == "downloadFile") {
 		auto buf = QSharedPointer<QBuffer>(new QBuffer);
-		cloud->waitFor(cloud->downloadFile(filename, buf));
+		cloud->downloadFile(filename, buf)->waitForResponseReady();
 		ui.log->appendPlainText("\nDownloaded File: \n" + buf->data() + "\n");
 	}
 	else if (method == "uploadFile") {
 		auto buf = new QBuffer;
 		buf->setData(body);
-		cloud->waitFor(cloud->uploadFile(filename, buf));
+		cloud->uploadFile(filename, buf)->waitForResponseReady();
 		ui.log->appendPlainText("\nFile Uploaded\n");
 	}
 	else if (method == "remove") {
-		cloud->waitFor(cloud->remove(filename));
+		cloud->remove(filename)->waitForResponseReady();
 		ui.log->appendPlainText("\nFile Removed\n");
 	}
 	else if (method == "spaceAvailable") {

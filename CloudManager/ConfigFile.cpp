@@ -46,7 +46,7 @@ void ConfigFile::saveChanges()
 	QByteArray configFile = QJsonDocument(confObj).toJson();
 	auto buf = new QBuffer;
 	buf->setData(configFile);
-	cloud->waitFor(cloud->uploadFile(configFileName, buf));
+	cloud->uploadFile(configFileName, buf)->waitForResponseReady();
 }
 
 ConfigFile::ConfigFile(AbstractCloud* cloud)
@@ -65,7 +65,7 @@ ConfigFile::CaptureGuard ConfigFile::trycapture()
 	if (remoteResourceCaptured) return CaptureGuard(this);
 	//if (locked()) throw Unlockable();
 	try{
-		cloud->waitFor(cloud->lockFile(configFileName));
+		cloud->lockFile(configFileName)->waitForResponseReady();
 	}
 	catch (...) {
 		throw Unlockable();
@@ -85,7 +85,7 @@ void ConfigFile::uncapture(int mtimeout)
 		if (remoteResourceCaptured) {
 			remoteResourceCaptured = false;
 			saveChanges();
-			cloud->waitFor(cloud->unlockFile(configFileName));
+			cloud->unlockFile(configFileName)->waitForResponseReady();
 		}
 	};
 	if (mtimeout < 0) {
@@ -137,7 +137,7 @@ QJsonObject ConfigFile::getConfigJSON()
 	ShortNameSet remote;
 	QSharedPointer<QBuffer> configBuf(new QBuffer);
 	try {
-		cloud->waitFor(cloud->downloadFile(configFileName, configBuf));
+		cloud->downloadFile(configFileName, configBuf)->waitForResponseReady();
 	}
 	catch (...) {
 	}
@@ -156,7 +156,7 @@ ConfigFile::~ConfigFile()
 {
 	if (remoteResourceCaptured) {
 		saveChanges();
-		cloud->waitFor(cloud->unlockFile(configFileName));
+		cloud->unlockFile(configFileName)->waitForResponseReady();
 	}
 }
 

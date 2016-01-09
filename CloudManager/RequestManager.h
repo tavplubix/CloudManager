@@ -9,10 +9,12 @@
 #include <QMap>
 #include <QList>
 #include <QPair>
+#include <QPointer>
 
 #include "Common.h"
 #include "NetworkExceptions.h"
 #include "File.h"
+
 
 
 typedef unsigned long long RequestID;
@@ -20,7 +22,7 @@ typedef QList< QPair<QByteArray, QByteArray> > HeaderList;
 
 class RequestManager;
 
-class Request : public QObject
+class RequestPrivate : public QObject
 {
 	Q_OBJECT
 public classes:
@@ -38,15 +40,15 @@ private slots:
 
 private methods:
 	friend RequestManager;
-	Request(QObject* parent = nullptr);
-	~Request();
+	RequestPrivate(QObject* parent = nullptr);
+	~RequestPrivate();
 	void setReply(QNetworkReply* reply);
 	void setBody(QIODevice* body);
 
 public methods:
 	RequestID id() const noexcept { return m_id; }
 	Status status() const noexcept { return m_status; }
-	//void waitForResponseReady() const;
+	void waitForResponseReady() const;
 	//void waitForFinished() const noexcept;
 	HeaderList responseHeaders() const;
 	QByteArray responseBody() const;
@@ -56,6 +58,9 @@ signals:
 	void responseReady();
 };
 
+typedef QPointer<RequestPrivate> Request;
+
+
 
 class RequestManager : private QNetworkAccessManager 
 {
@@ -63,10 +68,10 @@ class RequestManager : private QNetworkAccessManager
 
 private fields:
 	RequestID lastID;
-	QMap<RequestID, Request*> requestMap;
+	QMap<RequestID, RequestPrivate*> requestMap;
 		
 private methods:
-	RequestID newRequest(QNetworkReply* reply, QIODevice* body = nullptr);
+	Request newRequest(QNetworkReply* reply, QIODevice* body = nullptr);
 public methods:
 	RequestManager(const QUrl& host, bool encryped = true, QObject* parent = nullptr);
 	RequestManager(const RequestManager&) = delete;
@@ -74,31 +79,41 @@ public methods:
 	RequestManager& operator = (const RequestManager&) = delete;
 	RequestManager& operator = (const RequestManager&&) = delete;
 
-	Request* getRequestByID(RequestID id) const;
+	RequestPrivate* getRequestByID(RequestID id) const;
 
-	void waitForResponseReady(RequestID id) const;
+	void waitForResponseReady(const Request& request) const;
 	void waitForFinished(RequestID id) const noexcept;
 
 	//Requests without body
-	RequestID HEAD(const QNetworkRequest& req);
-	RequestID GET(const QNetworkRequest& req);
-	RequestID DELETE(const QNetworkRequest& req);
+	Request HEAD(const QNetworkRequest& req);
+	Request GET(const QNetworkRequest& req);
+	Request DELETE(const QNetworkRequest& req);
 
 	//Requests with body
-	RequestID POST(const QNetworkRequest& req, const QByteArray& body);
-	RequestID POST(const QNetworkRequest& req, const QJsonObject& body);
-	RequestID POST(const QNetworkRequest& req, const File& body);
-	RequestID POST(const QNetworkRequest& req, QIODevice* body);
+	Request POST(const QNetworkRequest& req, const QByteArray& body);
+	Request POST(const QNetworkRequest& req, const QJsonObject& body);
+	Request POST(const QNetworkRequest& req, const File& body);
+	Request POST(const QNetworkRequest& req, QIODevice* body);
 		   
-	RequestID PUT(const QNetworkRequest& req, const QByteArray& body);
-	RequestID PUT(const QNetworkRequest& req, const QJsonObject& body);
-	RequestID PUT(const QNetworkRequest& req, const File& body);
-	RequestID PUT(const QNetworkRequest& req, QIODevice* body);
+	Request PUT(const QNetworkRequest& req, const QByteArray& body);
+	Request PUT(const QNetworkRequest& req, const QJsonObject& body);
+	Request PUT(const QNetworkRequest& req, const File& body);
+	Request PUT(const QNetworkRequest& req, QIODevice* body);
 
 
-	QNetworkReply* __CRUTCH__get_QNetworkReply_object_by_RequestID__(RequestID id);
+	const QNetworkReply* __CRUTCH__get_QNetworkReply_object_by_Request__(Request& r) const;
+	typedef QNetworkReply* ReplyID;
+	static Request fromDeprecatedID(const ReplyID rid);
 
 };
+
+typedef QPointer<RequestPrivate> Request;
+
+
+
+
+
+
 
 
 

@@ -10,6 +10,10 @@
 #include <QSslKey>
 #include <QSsl>
 
+
+
+
+
 YandexDiskWebDav::YandexDiskWebDav(QString qsettingsGroup)
 	: AbstractCloud(qsettingsGroup)
 {
@@ -44,7 +48,7 @@ YandexDiskWebDav::~YandexDiskWebDav()
 }
 
 
-ReplyID YandexDiskWebDav::authorize()		//TODO use QAuthorizer
+Request YandexDiskWebDav::authorize()		//TODO use QAuthorizer
 {
 	if (authorized()) return nullptr;
 	OAuthClientInfo client(appID, clientSecret);
@@ -71,12 +75,6 @@ ReplyID YandexDiskWebDav::authorize()		//TODO use QAuthorizer
 
 
 qint64 YandexDiskWebDav::m_spaceAvailable()	const
-//варианты:
-// 1 заблокировать поток, отправить запрос в другом потоке (Блокировка потока - плохо)
-// 2 добавить функцию updateAvailableSpace(), из этой ф-ции возвращать неактуальные данные
-// 3 возвращать значение сигналом (хуйня?)
-// 4 осилить XMPP (второй вариант + получать уведомления об изменении доступного объёма, инфа актуальна) 
-// xmpp _СЛИШКОМ_ ебаный, лучше ВРЕМЕННО закостылять первым способом
 {
 	QNetworkRequest request(QUrl("https://webdav.yandex.ru/"));
 	request.setRawHeader("Authorization", authorizationHeader);
@@ -168,7 +166,7 @@ bool YandexDiskWebDav::authorized() const
 
 
 
-ReplyID YandexDiskWebDav::downloadFile(const ShortName& name, QSharedPointer<QIODevice> file)
+Request YandexDiskWebDav::downloadFile(const ShortName& name, QSharedPointer<QIODevice> file)
 {
 	QNetworkRequest request("https://webdav.yandex.ru/" + name);
 	request.setRawHeader("Authorization", authorizationHeader);
@@ -193,11 +191,11 @@ ReplyID YandexDiskWebDav::downloadFile(const ShortName& name, QSharedPointer<QIO
 		reply->deleteLater();
 		//emit done();
 	});
-	return reply;
+	return RequestManager::fromDeprecatedID(reply);
 }
 
 
-ReplyID YandexDiskWebDav::uploadFile(const ShortName& name, QIODevice* file)
+Request YandexDiskWebDav::uploadFile(const ShortName& name, QIODevice* file)
 {
 	createDirIfNecessary(QFileInfo(name).path());
 	QNetworkRequest request("https://webdav.yandex.ru/" + name);
@@ -223,7 +221,7 @@ ReplyID YandexDiskWebDav::uploadFile(const ShortName& name, QIODevice* file)
 		reply->deleteLater();
 	});
 	spaceAvailableCache -= file->size();
-	return reply;
+	return RequestManager::fromDeprecatedID(reply);
 }
 
 QDateTime YandexDiskWebDav::lastModified(const ShortName& name) const
@@ -305,7 +303,7 @@ void YandexDiskWebDav::mkdir(ShortName dir)		//TODO add DirName class
 
 }
 
-ReplyID YandexDiskWebDav::remove(const ShortName& name)
+Request YandexDiskWebDav::remove(const ShortName& name)
 {
 	QNetworkRequest request("https://webdav.yandex.ru/" + name);
 	request.setRawHeader("Authorization", authorizationHeader);
@@ -319,7 +317,7 @@ ReplyID YandexDiskWebDav::remove(const ShortName& name)
 		//emit done();
 	});
 	spaceAvailableCache += QFileInfo(LongName(name)).size();
-	return reply;
+	return RequestManager::fromDeprecatedID(reply);
 	//TODO remove dir if empty
 }
 

@@ -29,11 +29,11 @@ private:
 protected:
 	//======================== Virtual Protected Methods =========================
 	bool authorized() const override final;
-	ReplyID authorize() override final;
+	Request authorize() override final;
 	qint64 m_spaceAvailable() const override final;
-	ReplyID downloadFile(const ShortName& name, QSharedPointer<QIODevice> file) override final;
-	ReplyID uploadFile(const ShortName& name, QIODevice* file) override final;
-	ReplyID remove(const ShortName& name) override final;
+	Request downloadFile(const ShortName& name, QSharedPointer<QIODevice> file) override final;
+	Request uploadFile(const ShortName& name, QIODevice* file) override final;
+	Request remove(const ShortName& name) override final;
 	virtual void mkdir(const QString& dir);
 public:
 	//=========================== Public Methods =================================
