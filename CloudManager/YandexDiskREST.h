@@ -44,10 +44,9 @@ public:
 	QByteArray remoteMD5FileHash(const ShortName& filename) const override final;
 	QString serviceName() const override { return "YandexDisk"; };
 	QString userName() const override;
-#if DEBUG
 	QByteArray sendDebugRequest(QByteArray requestType, QString url, QByteArray body = QByteArray(),
 		QList<QNetworkReply::RawHeaderPair> additionalHeaders = QList<QNetworkReply::RawHeaderPair>()) override final;
-#endif
+
 
 	//=========================== Private Qt Slots ===============================
 	private slots:

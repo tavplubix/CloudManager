@@ -12,13 +12,9 @@
 #include "RequestManager.h"
 
 
-#define DEBUG 1
+#define DEBUG 0
 #define NETLOG 0
 
-#if DEBUG
-#define private public
-#define protected public
-#endif
 
 //#define NEW_SHARED(t, v) [&]()->QSharedPointer<t>{return QSharedPointer<t>(new t(v));}()
 
@@ -60,14 +56,8 @@ protected:
 	//===================== Protected Methods =========================
 	void netLog(QNetworkReply *reply, QIODevice* logDevice = nullptr) const;
 	void netLog(const QByteArray& type, const QNetworkRequest &request, const QByteArray &body, QIODevice* logDevice = nullptr) const;
-//	void registerReply(ReplyID reply) const;
 	void waitFor(ReplyID reply) const;		//waits for the QNetworkReply::destroyed signal (it means that processing of a reply is complete)
 	void waitForFinishedSignal(QNetworkReply* reply) const;
-//protected slots:
-//	void setReplyFinished(ReplyID reply) const;
-//protected:
-//	bool replyFinished(ReplyID reply) const;
-//	QSet<ReplyID> allReplies() const { return replies; }
 	//============== Pure Virtual Prorected Methods ===================
 	virtual bool authorized() const = 0;
 	virtual Request authorize() = 0;
@@ -97,10 +87,8 @@ public:
 	virtual ~AbstractCloud();
 	virtual QString serviceName() const { return "unknown"; };
 	virtual QString userName() const { return "unknown"; };
-#if DEBUG
 	virtual QByteArray sendDebugRequest(QByteArray requestType, QString url, QByteArray body = QByteArray(),
 		QList<QNetworkReply::RawHeaderPair> additionalHeaders = QList<QNetworkReply::RawHeaderPair>()) = 0;
-#endif
 	//============ Pure Virtual Public Methods ========================
 	virtual QDateTime lastModified(const ShortName& name) const = 0;
 	virtual QByteArray remoteMD5FileHash(const ShortName& filename) const = 0;

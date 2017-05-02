@@ -3,79 +3,7 @@
 #include "ConfigFile.h"
 
 
-void AbstractCloud::netLog(QNetworkReply *reply, QIODevice* logDevice) const
-{
-//#if NETLOG
-	//static QFile log("network.log");
-	//log.open(QIODevice::Append);
-	QIODevice* log;
-	if (logDevice) log = logDevice;
-	else if (NETLOG) log = &this->log;
-	else return;
-	log->write("\n======================= RESPONSE =========================\n");
-	int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-	log->write("Status code: " + QString::number(code).toLocal8Bit() + "\n");
-	QList<QByteArray> headers = reply->rawHeaderList();
-	for (auto i : headers) log->write(i + ": " + reply->rawHeader(i) + "\n");
-	log->write("BODY:\n");
-	log->write(reply->peek(reply->bytesAvailable() < 1024 ? reply->bytesAvailable():1024));
-	log->write("\n==========================================================\n");
-	//log->flush();
-//#endif
-}
 
-void AbstractCloud::netLog(const QByteArray& type, const QNetworkRequest &request, const QByteArray &body, QIODevice* logDevice) const
-{
-//#if NETLOG
-	//static QFile log("network.log");
-	//log.open(QIODevice::Append);
-	QIODevice* log;
-	if (logDevice) log = logDevice;
-	else if (NETLOG) log = &this->log;
-	else return;
-	log->write("\n======================== REQUEST =========================\n");
-	log->write(type + "  " + request.url().toString().toLocal8Bit() + "\n");
-	QList<QByteArray> headers = request.rawHeaderList();
-	for (auto i : headers) log->write(i + ": " + request.rawHeader(i) + "\n");
-	log->write("BODY:\n");
-	log->write(body);
-	log->write("\n==========================================================\n");
-	//log->flush();
-//#endif
-}
-
-
-void AbstractCloud::waitFor(ReplyID replyid) const
-{
-	const QNetworkReply* reply= replyid;
-	if (reply == nullptr) {
-		qDebug() << "WARNING: reply == nullptr";
-		return;
-	}
-	//WARNING deadlock if reply has been already destroyed
-	/*static*/ QEventLoop loop;
-	connect(reply, &QNetworkReply::destroyed, &loop, &QEventLoop::quit);
-	loop.exec();
-	///*static*/ QTimer timer;
-	//connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
-	//timer.start(50);
-	//while (!replyFinished(reply))
-	//{
-	//	loop.exec(QEventLoop::ExcludeUserInputEvents);
-	//}
-}
-
-void AbstractCloud::waitForFinishedSignal(QNetworkReply* reply) const
-{
-	if (reply == nullptr) {
-		qDebug() << "WARNING: reply == nullptr";
-		return;
-	}
-	//WARNING deadlock if reply has been already finished
-	/*static*/ QEventLoop loop;
-	connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-	loop.exec();
-}
 
 
 AbstractCloud::AbstractCloud(QString qsettingsGroup) 
@@ -89,6 +17,14 @@ AbstractCloud::AbstractCloud(QString qsettingsGroup)
 	connect(&timer300s, &QTimer::timeout, this, [&](){ if (m_status == Status::Ready) spaceAvailableCache = m_spaceAvailable(); });
 }
 
+AbstractCloud::~AbstractCloud()
+{
+	delete config;
+	//settings->beginGroup(managerID());
+	//settings->setValue("managedFiles", QVariant::fromValue(localFiles));
+	//settings->endGroup();
+	//delete settings;
+}
 
 void AbstractCloud::init()
 {
@@ -103,6 +39,7 @@ void AbstractCloud::init()
 	timer300s.start();
 	m_status = Status::Ready;
 }
+
 
 AbstractCloud::Status AbstractCloud::status() const
 {
@@ -188,11 +125,103 @@ void AbstractCloud::removeFileData(QFileInfo file)
 	config->removeFileData(filename);
 }
 
-AbstractCloud::~AbstractCloud()
+
+
+
+
+
+
+
+
+
+
+
+
+[[deprecated("It's better to use Wireshark (with pre-master key logging)")]]
+void AbstractCloud::netLog(QNetworkReply *reply, QIODevice* logDevice) const
 {
-	delete config;
-	//settings->beginGroup(managerID());
-	//settings->setValue("managedFiles", QVariant::fromValue(localFiles));
-	//settings->endGroup();
-	//delete settings;
+	//#if NETLOG
+	//static QFile log("network.log");
+	//log.open(QIODevice::Append);
+	QIODevice* log;
+	if (logDevice) log = logDevice;
+	else if (NETLOG) log = &this->log;
+	else return;
+	log->write("\n======================= RESPONSE =========================\n");
+	int code = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+	log->write("Status code: " + QString::number(code).toLocal8Bit() + "\n");
+	QList<QByteArray> headers = reply->rawHeaderList();
+	for (auto i : headers) log->write(i + ": " + reply->rawHeader(i) + "\n");
+	log->write("BODY:\n");
+	log->write(reply->peek(reply->bytesAvailable() < 1024 ? reply->bytesAvailable() : 1024));
+	log->write("\n==========================================================\n");
+	//log->flush();
+	//#endif
 }
+
+[[deprecated("It's better to use Wireshark (with pre-master key logging)")]]
+void AbstractCloud::netLog(const QByteArray& type, const QNetworkRequest &request, const QByteArray &body, QIODevice* logDevice) const
+{
+	//#if NETLOG
+	//static QFile log("network.log");
+	//log.open(QIODevice::Append);
+	QIODevice* log;
+	if (logDevice) log = logDevice;
+	else if (NETLOG) log = &this->log;
+	else return;
+	log->write("\n======================== REQUEST =========================\n");
+	log->write(type + "  " + request.url().toString().toLocal8Bit() + "\n");
+	QList<QByteArray> headers = request.rawHeaderList();
+	for (auto i : headers) log->write(i + ": " + request.rawHeader(i) + "\n");
+	log->write("BODY:\n");
+	log->write(body);
+	log->write("\n==========================================================\n");
+	//log->flush();
+	//#endif
+}
+
+[[deprecated("Use RequestPrivate::waitForResponseReady() or RequestManager::waitForResponseReady() instead")]]
+void AbstractCloud::waitFor(ReplyID replyid) const
+{
+	const QNetworkReply* reply = replyid;
+	if (reply == nullptr) {
+		qDebug() << "WARNING: reply == nullptr";
+		return;
+	}
+	//WARNING deadlock if reply has been already destroyed
+	/*static*/ QEventLoop loop;
+	connect(reply, &QNetworkReply::destroyed, &loop, &QEventLoop::quit);
+	loop.exec();
+	///*static*/ QTimer timer;
+	//connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+	//timer.start(50);
+	//while (!replyFinished(reply))
+	//{
+	//	loop.exec(QEventLoop::ExcludeUserInputEvents);
+	//}
+}
+
+[[deprecated("Use RequestPrivate::waitForFinished() or RequestManager::waitForFinished() instead")]]
+void AbstractCloud::waitForFinishedSignal(QNetworkReply* reply) const
+{
+	if (reply == nullptr) {
+		qDebug() << "WARNING: reply == nullptr";
+		return;
+	}
+	//WARNING deadlock if reply has been already finished
+	/*static*/ QEventLoop loop;
+	connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+	loop.exec();
+}
+
+
+
+
+
+
+
+
+
+
+
+
